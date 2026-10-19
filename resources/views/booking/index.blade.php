@@ -50,16 +50,33 @@
 
     /* Grid 1 kolom di mobile, 2 kolom di desktop */
     .nss-bk-grid { flex: 1; display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem; align-items: start; padding-bottom: 1rem; }
-    .nss-bk-form-inner { order: 1; min-width: 0; display: flex; flex-direction: column; }
+    
+    /* ── Penyesuaian Responsif Mobile Agar ke Tengah ───────────────────── */
+    .nss-bk-form-inner { 
+        order: 1; 
+        min-width: 0; 
+        display: flex; 
+        flex-direction: column; 
+        width: 100%;
+        max-width: 38rem;
+        margin-inline: auto;
+        padding-inline: 1rem;
+    }
 
     /* Kartu ringkasan: tersembunyi di mobile, tampil saat Alpine.js tambah class is-open */
-    .nss-bk-aside { order: 2; display: none; width: 100%; max-width: 24rem; margin: 0 auto; }
+    .nss-bk-aside { 
+        order: 2; 
+        display: none; 
+        width: 100%; 
+        max-width: 38rem; 
+        margin: 1.5rem auto 0 auto; 
+    }
     .nss-bk-aside.is-open { display: block; }
 
     /* clamp(min, preferred, max) = ukuran font responsif */
     .nss-title { font-size: clamp(1.125rem, 3vw, 1.375rem); line-height: 1.2; font-weight: 700; letter-spacing: -.015em; }
     .nss-lead { margin-top: .125rem; max-width: 30rem; font-size: .8125rem; line-height: 1.4; color: var(--nss-muted); }
-    .nss-panel { outline: none; padding-bottom: .5rem; }
+    .nss-panel { outline: none; padding-bottom: .5rem; width: 100%; max-width: 38rem; margin-inline: auto; }
     .nss-step-body { margin-top: .5rem; }
     .nss-alert { margin-bottom: .75rem; padding: .625rem .75rem; border: 1px solid #fecaca; border-radius: 8px; background: #fef2f2; color: #b91c1c; font-size: .875rem; }
 
@@ -71,7 +88,7 @@
     .nss-bk .nss-btn { height: 3rem; padding: 0 1.5rem; font-size: .875rem; min-width: 8rem; border-radius: 8px; }
 
     /* Kartu pilihan tarif: gap dikecilkan agar tombol Lanjut tidak terpotong */
-    .nss-tarifs { display: grid; gap: .4rem; }
+    .nss-tarifs { display: grid; gap: .4rem; width: 100%; margin-inline: auto; }
     .nss-tarif { display: flex; flex-wrap: wrap; align-items: center; gap: .2rem .5rem; padding: .625rem .875rem; background: #fff; border: 2px solid transparent; border-radius: 10px; cursor: pointer; transition: border-color .2s; }
     label:hover > .nss-tarif { border-color: var(--nss-line); }
     input:checked + .nss-tarif { border-color: var(--nss-primary); }
@@ -94,7 +111,7 @@
     .nss-tabs-wrap { margin-top: .375rem; }
 
     /* Tanggal & durasi */
-    .nss-grid2 { display: grid; gap: .875rem; max-width: 34rem; }
+    .nss-grid2 { display: grid; gap: .875rem; width: 100%; max-width: 34rem; margin-inline: auto; }
     @media (min-width: 640px) { .nss-grid2 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
     .nss-stepper { display: flex; max-width: 12rem; height: 2.75rem; border: 1px solid var(--nss-line); border-radius: 8px; background: #fff; overflow: hidden; }
     .nss-stepper:focus-within { border-color: var(--nss-primary); }
@@ -106,7 +123,7 @@
     .nss-note { margin-top: .5rem; font-size: .875rem; color: var(--nss-muted); }
 
     /* Daftar snack */
-    .nss-list { max-width: 36rem; border-top: 1px solid var(--nss-line); border-bottom: 1px solid var(--nss-line); }
+    .nss-list { width: 100%; max-width: 36rem; margin-inline: auto; border-top: 1px solid var(--nss-line); border-bottom: 1px solid var(--nss-line); }
     .nss-list > li { display: flex; align-items: center; gap: .75rem; padding: .625rem 0; }
     .nss-list > li + li { border-top: 1px solid var(--nss-line); }
     .nss-thumb { flex: none; width: 3.5rem; height: 3.5rem; overflow: hidden; border-radius: 8px; background: #e5eaea; }
@@ -123,7 +140,7 @@
     .nss-qty-val { display: grid; place-items: center; width: 2rem; background: #fff; font-size: .875rem; font-weight: 700; }
 
     /* Form data pemesan */
-    .nss-fields { display: grid; gap: 1rem; max-width: 26rem; }
+    .nss-fields { display: grid; gap: 1rem; width: 100%; max-width: 28rem; margin-inline: auto; }
 
     /* Bar aksi sticky di bawah area scroll. env(safe-area-inset-bottom) = ruang notch iPhone. */
     .nss-bar { position: sticky; bottom: 0; z-index: 20; display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin: auto -1rem 0; padding: .75rem 1rem calc(.75rem + env(safe-area-inset-bottom, 0px)); background: var(--nss-paper); border-top: 1px solid var(--nss-line); box-shadow: 0 -6px 16px -10px rgba(15, 30, 40, .18); }
@@ -283,8 +300,8 @@
 
                                     {{-- Galeri 12 foto area, slideshow otomatis 3 detik --}}
                                     <div class="nss-gal-frame"
-                                         @touchstart.passive="touchX=$event.changedTouches[0].clientX"
-                                         @touchend.passive="swipe($event.changedTouches[0].clientX)">
+                                        @touchstart.passive="touchX=$event.changedTouches[0].clientX"
+                                        @touchend.passive="swipe($event.changedTouches[0].clientX)">
 
                                         {{-- 12 slide foto nyata --}}
                                         @for($i = 1; $i <= 12; $i++)
@@ -414,7 +431,7 @@
                             <!-- ============ LANGKAH 4: DATA PEMESAN ============ -->
                             <div x-show="step === 4" x-cloak class="nss-fields"
                                 x-transition:enter="nss-enter" x-transition:enter-start="nss-enter-from" x-transition:enter-end="nss-enter-to">
-                                <div>
+                                <div><br>
                                     <label for="customer_name" class="nss-label">Nama lengkap</label>
                                     <input type="text" id="customer_name" name="customer_name" x-model="form.customer_name" required
                                         autocomplete="name" class="nss-field" placeholder="Nama sesuai identitas">

@@ -329,8 +329,8 @@ class BookingController extends Controller
 
         // Harus cocok booking_code DAN customer_phone
         $booking = Booking::where('booking_code', $request->booking_code)
-                          ->where('customer_phone', $request->customer_phone)
-                          ->firstOrFail();
+                        ->where('customer_phone', $request->customer_phone)
+                        ->firstOrFail();
 
         if ($booking->ktm_status !== 'rejected') {
             return back()->with('error', 'Upload ulang hanya diizinkan untuk KTM yang ditolak.');
