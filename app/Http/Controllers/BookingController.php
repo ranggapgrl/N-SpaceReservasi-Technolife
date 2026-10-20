@@ -30,7 +30,7 @@ class BookingController extends Controller
     // ═══════════════════════════════════════════════
     //  index() — Halaman Form Booking
     // ═══════════════════════════════════════════════
-    public function index()
+public function index()
     {
         $roomTypes = Room::where('status', 'active')
             ->get()
@@ -38,14 +38,15 @@ class BookingController extends Controller
             ->map(fn($rooms) => $rooms->first());
 
         $products = Product::where('is_active', true)->get();
+        
+        // Ambil daftar tanggal yang diblokir oleh admin
+        $blockedDates = BlockedDate::pluck('date')->map(fn($d) => $d->format('Y-m-d'))->toArray();
 
-        return view('booking.index', compact('roomTypes', 'products'));
+        return view('booking.index', compact('roomTypes', 'products', 'blockedDates'));
     }
 
-    // ═══════════════════════════════════════════════
-    //  checkAvailability() — Cek Ketersediaan Ruangan (AJAX)
-    // ═══════════════════════════════════════════════
-    public function checkAvailability(Request $request)
+    //  checkAvailability() — 
+public function checkAvailability(Request $request)
     {
         $request->validate([
             'room_type' => 'required|string',
@@ -53,14 +54,21 @@ class BookingController extends Controller
             'duration'  => 'required|integer|min:1|max:30',
         ]);
 
-        // Cek apakah tanggal ini diblokir oleh admin
-        $blocked = BlockedDate::where('date', $request->date)->first();
-        if ($blocked) {
-            $reason = $blocked->reason ? " ({$blocked->reason})" : '';
-            return response()->json([
-                'available' => false,
-                'message'   => 'Tanggal ini ditutup oleh admin' . $reason . '. Silakan pilih tanggal lain.',
-            ]);
+        // Cek apakah ada tanggal dalam rentang durasi yang diblokir oleh admin
+        $startDate = \Carbon\Carbon::parse($request->date);
+        $duration  = (int) $request->duration;
+
+        for ($i = 0; $i < $duration; $i++) {
+            $checkDate = $startDate->copy()->addDays($i)->format('Y-m-d');
+            $blocked = BlockedDate::where('date', $checkDate)->first();
+            
+            if ($blocked) {
+                $reason = $blocked->reason ? " ({$blocked->reason})" : '';
+                return response()->json([
+                    'available' => false,
+                    'message'   => "Tanggal {$checkDate} ditutup oleh admin{$reason}. Silakan pilih tanggal lain.",
+                ]);
+            }
         }
 
         $availableRoom = $this->bookingService->getAvailableRoom(
@@ -83,9 +91,9 @@ class BookingController extends Controller
         ]);
     }
 
-    // ═══════════════════════════════════════════════
+
     //  store() — Proses Booking Baru
-    // ═══════════════════════════════════════════════
+
     /**
      * Alur:
      * 1. Validasi input (termasuk KTM jika mahasiswa)
@@ -109,10 +117,15 @@ class BookingController extends Controller
             'products'         => 'nullable|array'
         ]);
 
-        // ── Cek Tanggal Tidak Diblokir ────────────────────────────────────────
-        if (BlockedDate::where('date', $request->date)->exists()) {
-            return back()->with('error', 'Tanggal yang Anda pilih ditutup oleh admin. Silakan pilih tanggal lain.');
-        }
+        $startDate = \Carbon\Carbon::parse($request->date);
+                $duration  = (int) $request->duration;
+
+                for ($i = 0; $i < $duration; $i++) {
+                    $checkDate = $startDate->copy()->addDays($i)->format('Y-m-d');
+                    if (BlockedDate::where('date', $checkDate)->exists()) {
+                        return back()->with('error', "Tanggal {$checkDate} dalam rentang pilihan Anda telah ditutup oleh admin. Silakan pilih tanggal lain.");
+                    }
+                }
 
         // ── Cek Ketersediaan Ruangan ─────────────────────────────────────────
         $availableRoom = $this->bookingService->getAvailableRoom(
@@ -217,7 +230,7 @@ class BookingController extends Controller
             if (!in_array($booking->booking_code, $history)) {
                 $history[] = $booking->booking_code;
             }
-            Cookie::queue('nss_booking_history', json_encode($history), 43200);
+            Cookie::queue('nss_booking_history', json_encode($history), 3);
 
             // Semua langkah berhasil
             DB::commit();
@@ -304,7 +317,7 @@ class BookingController extends Controller
                     $cookieHistory[] = $b->booking_code;
                 }
             }
-            Cookie::queue('nss_booking_history', json_encode($cookieHistory), 43200);
+            Cookie::queue('nss_booking_history', json_encode($cookieHistory), 3);
 
         } elseif (!empty($cookieHistory)) {
             $bookings = Booking::with('room')

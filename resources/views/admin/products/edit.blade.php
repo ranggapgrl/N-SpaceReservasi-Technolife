@@ -5,7 +5,7 @@
 @section('content')
 
     <div class="max-w-2xl">
-        <a href="{{ route('admin.products.index') }}" class="inline-flex items-center text-n-gray text-sm hover:text-n-primary mb-6 transition-colors">
+        <a href="{{ route('admin.products.index') }}" class="inline-flex items-center text-n-gray text-sm hover:text-[#b1002c] mb-6 transition-colors">
             <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
             </svg>
@@ -23,7 +23,7 @@
                 <div>
                     <label class="block text-sm font-medium text-n-charcoal mb-1.5">Nama Produk <span class="text-red-500">*</span></label>
                     <input type="text" name="name" value="{{ old('name', $product->name) }}"
-                        class="w-full border border-n-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-n-primary/30 focus:border-n-primary transition @error('name') border-red-400 @enderror">
+                        class="w-full border border-n-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#b1002c] transition @error('name') border-red-400 @enderror">
                     @error('name') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
                 </div>
 
@@ -31,7 +31,7 @@
                 <div>
                     <label class="block text-sm font-medium text-n-charcoal mb-1.5">Deskripsi</label>
                     <textarea name="description" rows="3"
-                            class="w-full border border-n-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-n-primary/30 focus:border-n-primary transition resize-none @error('description') border-red-400 @enderror">{{ old('description', $product->description) }}</textarea>
+                            class="w-full border border-n-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#b1002c] transition resize-none @error('description') border-red-400 @enderror">{{ old('description', $product->description) }}</textarea>
                     @error('description') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
                 </div>
 
@@ -39,7 +39,7 @@
                 <div>
                     <label class="block text-sm font-medium text-n-charcoal mb-1.5">Harga (Rp) <span class="text-red-500">*</span></label>
                     <input type="number" name="price" value="{{ old('price', $product->price) }}" min="0"
-                        class="w-full border border-n-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-n-primary/30 focus:border-n-primary transition @error('price') border-red-400 @enderror">
+                        class="w-full border border-n-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#b1002c] transition @error('price') border-red-400 @enderror">
                     @error('price') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
                 </div>
 
@@ -54,7 +54,7 @@
                 <div>
                     <label class="block text-sm font-medium text-n-charcoal mb-1.5">URL Gambar <span class="text-n-gray text-xs">(opsional)</span></label>
                     <input type="url" name="image" value="{{ old('image', $product->image) }}"
-                        class="w-full border border-n-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-n-primary/30 focus:border-n-primary transition @error('image') border-red-400 @enderror"
+                        class="w-full border border-n-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#b1002c] transition @error('image') border-red-400 @enderror"
                         placeholder="https://...">
                     @error('image') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
                 </div>
@@ -63,14 +63,15 @@
                 <div class="flex items-center space-x-3">
                     <input type="checkbox" name="is_active" id="is_active" value="1"
                         {{ old('is_active', $product->is_active) ? 'checked' : '' }}
-                        class="w-4 h-4 accent-n-primary rounded">
+                        class="w-4 h-4 rounded" style="accent-color: #b1002c;">
                     <label for="is_active" class="text-sm font-medium text-n-charcoal cursor-pointer">Produk Aktif</label>
                 </div>
 
                 {{-- Submit --}}
                 <div class="flex items-center space-x-3 pt-2">
                     <button type="submit"
-                            class="bg-n-primary text-white px-6 py-2.5 rounded-xl text-sm font-semibold hover:bg-n-primary/90 transition-colors">
+                            class="text-white px-6 py-2.5 rounded-xl text-sm font-semibold transition-colors hover:opacity-90 shadow-sm"
+                            style="background-color: #b1002c;">
                         Perbarui Produk
                     </button>
                     <a href="{{ route('admin.products.index') }}"

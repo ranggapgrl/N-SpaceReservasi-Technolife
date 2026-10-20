@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Booking;
 use App\Models\Room;
+use App\Models\BlockedDate;
+use Carbon\Carbon;
 
 class DashboardController extends Controller
 {
@@ -21,19 +23,21 @@ class DashboardController extends Controller
         
         $recentBookings = Booking::with(['room'])->latest()->take(5)->get();
 
-        $selectedDate = $request->input('date', date('Y-m-d'));
-        $rooms = Room::where('status', 'active')->get();
-        
-        // Saring HANYA status 'confirmed' agar jika selesai/dibatalkan, jam langsung hijau kembali
-        $bookings = Booking::where('booking_date', $selectedDate)
-            ->where('status', 'confirmed')
-            ->get();
+        // ── Data untuk Jendela / Modal Kalender Sebulan Penuh ──
+        $currentMonth = $request->input('month', date('Y-m'));
+        $startDate = Carbon::parse($currentMonth . '-01')->startOfMonth();
+        $endDate = Carbon::parse($currentMonth . '-01')->endOfMonth();
 
-        $hours = [
-            '08:00', '09:00', '10:00', '11:00', '12:00', 
-            '13:00', '14:00', '15:00', '16:00', '17:00',
-            '18:00', '19:00', '20:00', '21:00'
-        ];
+        $blockedDates = BlockedDate::whereBetween('date', [$startDate->format('Y-m-d'), $endDate->format('Y-m-d')])
+            ->pluck('reason', 'date')
+            ->toArray();
+
+        $dailyBookings = Booking::whereBetween('booking_date', [$startDate->format('Y-m-d'), $endDate->format('Y-m-d')])
+            ->where('status', 'confirmed')
+            ->selectRaw('booking_date, count(*) as total_visitors')
+            ->groupBy('booking_date')
+            ->pluck('total_visitors', 'booking_date')
+            ->toArray();
 
         return view('admin.dashboard', compact(
             'todayRevenue',
@@ -41,10 +45,11 @@ class DashboardController extends Controller
             'pendingBookingsCount',
             'todayBookingsCount',
             'recentBookings',
-            'rooms',
-            'bookings',
-            'hours',
-            'selectedDate'
+            'blockedDates',
+            'dailyBookings',
+            'currentMonth',
+            'startDate',
+            'endDate'
         ));
     }
 }

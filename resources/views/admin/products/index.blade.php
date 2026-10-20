@@ -7,7 +7,7 @@
     <div class="flex items-center justify-between mb-6">
         <p class="text-n-gray text-sm">Total {{ $products->count() }} produk</p>
         <a href="{{ route('admin.products.create') }}"
-        class="inline-flex items-center bg-n-primary text-white px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-n-primary/90 transition-colors">
+        class="inline-flex items-center text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors hover:opacity-90" style="background-color: #b1002c;">
             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
             </svg>
@@ -49,7 +49,7 @@
                         <td class="px-6 py-4 font-medium">Rp{{ number_format($product->price, 0, ',', '.') }}</td>
                         <td class="px-6 py-4">
                             @if($product->is_active)
-                                <span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-semibold">Aktif</span>
+                                <span class="bg-red-50 border border-red-200 text-[#b1002c] px-3 py-1 rounded-full text-xs font-semibold">Aktif</span>
                             @else
                                 <span class="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-xs font-semibold">Nonaktif</span>
                             @endif
@@ -57,7 +57,7 @@
                         <td class="px-6 py-4 text-right">
                             <div class="flex items-center justify-end space-x-2">
                                 <a href="{{ route('admin.products.edit', $product) }}"
-                                class="inline-flex items-center px-3 py-1.5 bg-n-bg border border-n-border text-n-charcoal rounded-lg text-xs font-medium hover:border-n-primary hover:text-n-primary transition-colors">
+                                class="inline-flex items-center px-3 py-1.5 bg-n-bg border border-n-border text-n-charcoal rounded-lg text-xs font-medium hover:border-[#b1002c] hover:text-[#b1002c] transition-colors">
                                     Edit
                                 </a>
                                 <form action="{{ route('admin.products.destroy', $product) }}" method="POST">

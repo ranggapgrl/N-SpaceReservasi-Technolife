@@ -50,13 +50,13 @@
 
     /* Grid 1 kolom di mobile, 2 kolom di desktop */
     .nss-bk-grid { flex: 1; display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem; align-items: start; padding-bottom: 1rem; }
-    
+
     /* ── Penyesuaian Responsif Mobile Agar ke Tengah ───────────────────── */
-    .nss-bk-form-inner { 
-        order: 1; 
-        min-width: 0; 
-        display: flex; 
-        flex-direction: column; 
+    .nss-bk-form-inner {
+        order: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
         width: 100%;
         max-width: 38rem;
         margin-inline: auto;
@@ -64,12 +64,12 @@
     }
 
     /* Kartu ringkasan: tersembunyi di mobile, tampil saat Alpine.js tambah class is-open */
-    .nss-bk-aside { 
-        order: 2; 
-        display: none; 
-        width: 100%; 
-        max-width: 38rem; 
-        margin: 1.5rem auto 0 auto; 
+    .nss-bk-aside {
+        order: 2;
+        display: none;
+        width: 100%;
+        max-width: 38rem;
+        margin: 1.5rem auto 0 auto;
     }
     .nss-bk-aside.is-open { display: block; }
 
@@ -84,7 +84,6 @@
     .nss-bk .nss-label { font-size: .8125rem; margin-bottom: .375rem; display: block; font-weight: 500; }
     .nss-bk .nss-field { width: 100%; box-sizing: border-box; padding: 0 0.875rem; border: 1px solid var(--nss-line); background: #fff; height: 2.75rem; font-size: 1rem; border-radius: 8px; transition: border-color .15s, box-shadow .15s; }
     .nss-bk .nss-field:focus { border-color: var(--nss-primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--nss-primary) 18%, transparent); outline: none; }
-    .nss-bk input[type="date"].nss-field { max-width: 14rem; }
     .nss-bk .nss-btn { height: 3rem; padding: 0 1.5rem; font-size: .875rem; min-width: 8rem; border-radius: 8px; }
 
     /* Kartu pilihan tarif: gap dikecilkan agar tombol Lanjut tidak terpotong */
@@ -121,6 +120,24 @@
     .nss-stepper-val { flex: 1; display: flex; align-items: center; justify-content: center; gap: .375rem; border-left: 1px solid var(--nss-line); border-right: 1px solid var(--nss-line); }
     .nss-stepper-val input { width: 2rem; padding: 0; border: 0; background: none; text-align: center; font: inherit; font-weight: 700; color: inherit; outline: none; }
     .nss-note { margin-top: .5rem; font-size: .875rem; color: var(--nss-muted); }
+
+    /* ── Kalender kustom (tanggal ditutup admin tidak bisa diklik) ─────── */
+    .nss-cal { max-width: 20rem; background: #fff; border: 1px solid var(--nss-line); border-radius: 10px; padding: .75rem; }
+    .nss-cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: .5rem; }
+    .nss-cal-head button { width: 2rem; height: 2rem; border-radius: 6px; font-size: 1.125rem; }
+    .nss-cal-head button:hover:not(:disabled) { background: var(--nss-paper); }
+    .nss-cal-head button:disabled { opacity: .3; cursor: not-allowed; }
+    .nss-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; text-align: center; }
+    .nss-cal-dow span { font-size: .6875rem; color: var(--nss-muted); padding: .25rem 0; }
+    .nss-day { aspect-ratio: 1; border-radius: 6px; font-size: .875rem; font-variant-numeric: tabular-nums; }
+    .nss-day:hover:not(:disabled) { background: var(--nss-paper); }
+    .nss-day.is-selected { background: var(--nss-primary); color: #fff; font-weight: 700; }
+    .nss-day.is-range { background: color-mix(in srgb, var(--nss-primary) 15%, transparent); }
+    .nss-day.is-past { opacity: .3; cursor: not-allowed; }
+    .nss-day.is-blocked { background: #fef2f2; color: #b91c1c; text-decoration: line-through; cursor: not-allowed; }
+    .nss-day:empty { visibility: hidden; }
+    .nss-cal-legend { display: flex; gap: .75rem; margin-top: .625rem; font-size: .75rem; color: var(--nss-muted); }
+    .nss-cal-legend i { display: inline-block; width: .625rem; height: .625rem; border-radius: 3px; margin-right: .25rem; background: #fecaca; }
 
     /* Daftar snack */
     .nss-list { width: 100%; max-width: 36rem; margin-inline: auto; border-top: 1px solid var(--nss-line); border-bottom: 1px solid var(--nss-line); }
@@ -197,7 +214,6 @@
     }
 
     /* ── Upload KTM ─────────────────────────────────────────────────────── */
-    /* Kotak drop-zone: position:relative agar input file bisa dioverlay di atasnya */
     .nss-upload-box { margin-top: .5rem; border: 2px dashed var(--nss-line); border-radius: 10px; padding: 1.25rem 1rem; text-align: center; background: #f8fafa; transition: border-color .2s, background .2s; cursor: pointer; position: relative; }
     .nss-upload-box:hover    { border-color: var(--nss-primary); background: #f0f7f7; }
     .nss-upload-box.has-file { border-color: var(--nss-primary); background: #eef7f5; }
@@ -208,18 +224,16 @@
     .nss-upload-label { font-size: .875rem; font-weight: 600; color: var(--nss-ink); }
     .nss-upload-hint  { font-size: .75rem; color: var(--nss-muted); margin-top: .25rem; }
 
-    /* Preview nama file: text-overflow:ellipsis potong nama panjang dengan "..." */
     .nss-file-preview { display: flex; align-items: center; gap: .5rem; margin-top: .625rem; padding: .5rem .75rem; background: #fff; border: 1px solid var(--nss-line); border-radius: 8px; font-size: .8125rem; }
     .nss-file-preview-name  { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
     .nss-file-preview-clear { flex: none; color: var(--nss-muted); cursor: pointer; }
     .nss-file-preview-clear:hover { color: #b91c1c; }
 
-    /* Badge info KTM: kotak biru muda pemberitahuan wajib upload */
     .nss-ktm-info { display: flex; align-items: flex-start; gap: .5rem; padding: .625rem .875rem; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; font-size: .8125rem; color: #1e40af; margin-top: .75rem; }
     .nss-ktm-info svg { flex: none; margin-top: 1px; }
 </style>
 
-<div id="booking-wizard" x-data="bookingWizard()" class="nss nss-bk">
+<div id="booking-wizard" x-data="bookingWizard()" data-blocked="{{ json_encode($blockedDates ?? []) }}" class="nss nss-bk">
 
     <!-- Header -->
     <header class="nss-bk-head">
@@ -243,17 +257,14 @@
     </header>
 
     <main class="nss-wrap nss-bk-main">
-        {{--
-            enctype="multipart/form-data" WAJIB ada agar browser bisa mengirim file (KTM).
-            Tanpa atribut ini, file tidak akan terkirim ke server meskipun field sudah diisi.
-        --}}
+        {{-- enctype="multipart/form-data" WAJIB agar file KTM terkirim ke server. --}}
         <form action="{{ route('booking.store') }}" method="POST" id="bookingForm"
             enctype="multipart/form-data"
             @submit="isSubmitting = true" class="nss-form-wrapper">
             @csrf
 
             <div class="nss-bk-grid">
-                
+
                 <!-- KONTEN FORM -->
                 <div class="nss-bk-form-inner">
                     @if(session('error'))
@@ -303,7 +314,6 @@
                                         @touchstart.passive="touchX=$event.changedTouches[0].clientX"
                                         @touchend.passive="swipe($event.changedTouches[0].clientX)">
 
-                                        {{-- 12 slide foto nyata --}}
                                         @for($i = 1; $i <= 12; $i++)
                                         <figure class="nss-gal-slide" :class="{ 'is-active': area === {{ $i-1 }} }" :aria-hidden="area !== {{ $i-1 }}">
                                             <div class="nss-gal-fallback nss-display">N-Space</div>
@@ -349,9 +359,44 @@
                             <!-- ============ LANGKAH 2: TANGGAL & DURASI ============ -->
                             <div x-show="step === 2" x-cloak class="nss-grid2"
                                 x-transition:enter="nss-enter" x-transition:enter-start="nss-enter-from" x-transition:enter-end="nss-enter-to">
+
                                 <div>
-                                    <label for="date" class="nss-label">Tanggal mulai</label>
-                                    <input type="date" id="date" name="date" x-model="form.date" min="{{ date('Y-m-d') }}" class="nss-field">
+                                    <span class="nss-label">Tanggal mulai</span>
+                                    <input type="hidden" name="date" :value="form.date">
+
+                                    <div class="nss-cal">
+                                        <div class="nss-cal-head">
+                                            <button type="button" @click="prevMonth()" :disabled="!canPrev()" aria-label="Bulan sebelumnya">&lsaquo;</button>
+                                            <strong x-text="monthLabel()"></strong>
+                                            <button type="button" @click="nextMonth()" aria-label="Bulan berikutnya">&rsaquo;</button>
+                                        </div>
+
+                                        <div class="nss-cal-grid nss-cal-dow">
+                                            <template x-for="d in ['Min','Sen','Sel','Rab','Kam','Jum','Sab']" :key="d">
+                                                <span x-text="d"></span>
+                                            </template>
+                                        </div>
+
+                                        <div class="nss-cal-grid">
+                                            <template x-for="(cell, i) in calendarCells()" :key="i">
+                                                <button type="button" class="nss-day"
+                                                        :class="cell ? {
+                                                            'is-selected': cell.str === form.date,
+                                                            'is-range': inRange(cell.str),
+                                                            'is-past': cell.past,
+                                                            'is-blocked': cell.blocked
+                                                        } : {}"
+                                                        :disabled="!cell || cell.disabled"
+                                                        :title="cell && cell.blocked ? 'Ditutup / penuh' : ''"
+                                                        @click="cell && pickDate(cell.str)"
+                                                        x-text="cell ? cell.day : ''"></button>
+                                            </template>
+                                        </div>
+
+                                        <div class="nss-cal-legend">
+                                            <span><i></i>Ditutup / penuh</span>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <div>
@@ -382,7 +427,7 @@
                                     @php
                                         $productNameLower = strtolower($product->name);
                                         $localImage = '';
-                                        
+
                                         if ($loop->index === 3 || str_contains($productNameLower, 'lays') || str_contains($productNameLower, 'chip')) {
                                             $localImage = asset('images/produk/lays.png');
                                         } elseif (str_contains($productNameLower, 'butter') || str_contains($productNameLower, 'croissant')) {
@@ -436,7 +481,7 @@
                                     <input type="text" id="customer_name" name="customer_name" x-model="form.customer_name" required
                                         autocomplete="name" class="nss-field" placeholder="Nama sesuai identitas">
                                 </div>
-                                    <div>
+                                <div>
                                     <label for="customer_phone" class="nss-label">Nomor WhatsApp</label>
                                     <input type="tel" id="customer_phone" name="customer_phone" x-model="form.customer_phone" required
                                         autocomplete="tel" inputmode="tel"
@@ -445,79 +490,49 @@
                                     <p class="nss-note">Gunakan nomor WhatsApp yang aktif.</p>
                                 </div>
 
-                                {{--
-                                    ═══ UPLOAD KTM (KHUSUS MAHASISWA) ═══
-                                    
-                                    x-show="form.category === 'mahasiswa'" = field ini HANYA tampil
-                                    ketika pengunjung memilih kategori "Mahasiswa" di Langkah 1.
-                                    Pengunjung "Umum" tidak perlu melihat field ini.
-                                    
-                                    x-data pada elemen ini membuat sub-state Alpine.js lokal
-                                    untuk mengelola nama file yang dipilih (ktmFileName).
-                                --}}
+                                {{-- ═══ UPLOAD KTM (KHUSUS MAHASISWA) ═══ --}}
                                 <div x-show="form.category === 'mahasiswa'" x-cloak
-                                x-transition:enter="nss-enter" x-transition:enter-start="nss-enter-from" x-transition:enter-end="nss-enter-to"
+                                    x-transition:enter="nss-enter" x-transition:enter-start="nss-enter-from" x-transition:enter-end="nss-enter-to"
                                     x-data="{ ktmFileName: '' }">
 
-                                    {{-- Label dengan tanda * (wajib) --}}
                                     <p class="nss-label">
                                         Upload KTM <span style="color:#b91c1c" aria-label="wajib">*</span>
                                     </p>
 
-                                    {{--
-                                        Kotak upload interaktif.
-                                        :class="{ 'has-file': ktmFileName }" menambahkan class CSS
-                                        'has-file' jika sudah ada file dipilih (mengubah tampilan kotak).
-                                    --}}
                                     <div class="nss-upload-box" :class="{ 'has-file': ktmFileName }">
-                                        {{--
-                                            Input file disembunyikan secara visual (opacity:0) tapi
-                                            tetap fungsional. Klik pada kotak di atasnya akan memicu
-                                            dialog pilih file dari OS.
-                                            
-                                            @change: saat file dipilih, simpan nama filenya ke ktmFileName
-                                            untuk ditampilkan sebagai preview.
-                                            
-                                            x-show="form.category === 'mahasiswa'" juga diterapkan di
-                                            attribute 'required' agar validasi HTML5 tidak aktif untuk umum.
-                                        --}}
+                                        {{-- x-ref="ktmInput" dipakai tombol hapus untuk mereset input file --}}
                                         <input type="file"
                                             name="ktm_file"
                                             id="ktm_file"
+                                            x-ref="ktmInput"
                                             class="nss-upload-input"
                                             accept=".jpg,.jpeg,.png,.pdf"
                                             :required="form.category === 'mahasiswa'"
                                             @change="ktmFileName = $event.target.files[0]?.name || ''"
                                             aria-label="Upload file KTM">
 
-                                        {{-- Ikon dan teks saat belum ada file --}}
                                         <div x-show="!ktmFileName">
                                             <div class="nss-upload-icon">🪪</div>
                                             <p class="nss-upload-label">Klik untuk pilih file KTM</p>
                                             <p class="nss-upload-hint">Format: JPG, PNG, atau PDF · Maks. 2 MB</p>
                                         </div>
 
-                                        {{-- Teks konfirmasi saat file sudah dipilih --}}
                                         <div x-show="ktmFileName" x-cloak>
                                             <div class="nss-upload-icon">✅</div>
                                             <p class="nss-upload-label">File dipilih</p>
                                         </div>
                                     </div>
 
-                                    {{-- Preview nama file yang dipilih + tombol hapus --}}
                                     <div class="nss-file-preview" x-show="ktmFileName" x-cloak>
                                         <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                                         </svg>
                                         <span class="nss-file-preview-name" x-text="ktmFileName"></span>
-                                        {{-- Tombol hapus file: reset input dan state ktmFileName --}}
                                         <button type="button" class="nss-file-preview-clear"
                                                 aria-label="Hapus file"
-                                                @click="ktmFileName = ''; $refs.ktmInput.value = ''"
-                                                x-ref="clearBtn">✕</button>
+                                                @click="ktmFileName = ''; $refs.ktmInput.value = ''">✕</button>
                                     </div>
 
-                                    {{-- Info box: penjelasan kenapa KTM diperlukan --}}
                                     <div class="nss-ktm-info">
                                         <svg width="14" height="14" fill="currentColor" viewBox="0 0 20 20">
                                             <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
@@ -548,7 +563,7 @@
                                     <dd x-text="formatDate(form.date)"></dd>
                                 </div>
                             </dl>
-                            
+
                             <div class="nss-divider"></div>
 
                             <dl class="nss-rows">
@@ -627,6 +642,12 @@ function bookingWizard() {
         touchX: 0,
         areaCount: {{ $roomTypes->count() }},
         labels: ['Tarif', 'Tanggal', 'Tambahan', 'Pemesan'],
+
+        // Kalender & tanggal ditutup
+        blocked: [],
+        viewYear: new Date().getFullYear(),
+        viewMonth: new Date().getMonth(),
+
         form: {
             category: PRICES[oldCategory] ? oldCategory : 'mahasiswa',
             date: @json(old('date', '')),
@@ -637,6 +658,14 @@ function bookingWizard() {
         },
 
         init() {
+            // Normalisasi: ambil 10 karakter pertama (YYYY-MM-DD), jaga-jaga kalau formatnya datetime
+            this.blocked = JSON.parse(document.getElementById('booking-wizard').dataset.blocked || '[]')
+                .map(d => String(d).slice(0, 10));
+            if (this.form.date) {
+                const [y, m] = this.form.date.split('-').map(Number);
+                this.viewYear = y; this.viewMonth = m - 1;
+            }
+
             for (const id in oldProducts) {
                 const qty = parseInt(oldProducts[id], 10);
                 if (catalog[id] && qty > 0) this.form.products[id] = qty;
@@ -654,12 +683,12 @@ function bookingWizard() {
             this.area = (this.area + delta + this.areaCount) % this.areaCount;
             if (focusTab) this.$nextTick(() => document.getElementById('area-tab-' + this.area)?.focus());
         },
-        // Swipe galeri: geser kiri/kanan pindah foto (galCount=12, bukan areaCount tab)
+        // Swipe galeri: geser kiri/kanan pindah foto
         swipe(endX) {
             const dx = endX - this.touchX;
             if (Math.abs(dx) > 45) this.galJump((this.area + (dx < 0 ? 1 : -1) + this.galCount) % this.galCount);
         },
-        // Klik dot: loncat ke foto tertentu, reset timer agar tidak langsung loncat lagi
+        // Klik dot: loncat ke foto tertentu, reset timer
         galJump(idx) {
             this.area = idx;
             clearInterval(this.galTimer);
@@ -684,13 +713,81 @@ function bookingWizard() {
         nextStep() {
             if (this.canNext()) this.goTo(this.step + 1);
         },
+
+        // ── Helper tanggal (waktu lokal, bukan UTC) ─────────────────────
+        pad(n) { return String(n).padStart(2, '0'); },
+        toStr(d) { return d.getFullYear() + '-' + this.pad(d.getMonth() + 1) + '-' + this.pad(d.getDate()); },
+        todayStr() { return this.toStr(new Date()); },
+
+        // ── Kalender kustom ─────────────────────────────────────────────
+        monthLabel() {
+            return new Date(this.viewYear, this.viewMonth, 1)
+                .toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+        },
+        canPrev() {
+            const now = new Date();
+            return this.viewYear > now.getFullYear() ||
+                   (this.viewYear === now.getFullYear() && this.viewMonth > now.getMonth());
+        },
+        prevMonth() {
+            if (!this.canPrev()) return;
+            if (this.viewMonth === 0) { this.viewMonth = 11; this.viewYear--; } else this.viewMonth--;
+        },
+        nextMonth() {
+            if (this.viewMonth === 11) { this.viewMonth = 0; this.viewYear++; } else this.viewMonth++;
+        },
+        calendarCells() {
+            const first = new Date(this.viewYear, this.viewMonth, 1).getDay();
+            const total = new Date(this.viewYear, this.viewMonth + 1, 0).getDate();
+            const today = this.todayStr();
+            const cells = Array(first).fill(null);
+            for (let day = 1; day <= total; day++) {
+                const str = this.viewYear + '-' + this.pad(this.viewMonth + 1) + '-' + this.pad(day);
+                const past = str < today;
+                const blocked = this.blocked.includes(str);
+                cells.push({ day, str, past, blocked, disabled: past || blocked });
+            }
+            return cells;
+        },
+        pickDate(str) { this.form.date = str; },
+
+        // Menyorot rentang hari sesuai durasi
+        inRange(str) {
+            if (!this.form.date || str === this.form.date) return false;
+            return str > this.form.date && str <= this.endDate();
+        },
+
+        // Cek apakah rentang (tanggal mulai + durasi) menabrak tanggal yang ditutup
+        checkBlockedSelection() {
+            return this.firstBlockedInRange() !== null;
+        },
+        firstBlockedInRange() {
+            if (!this.form.date) return null;
+            const start = new Date(this.form.date + 'T00:00:00');
+            for (let i = 0; i < this.form.duration; i++) {
+                const d = new Date(start);
+                d.setDate(start.getDate() + i);
+                const str = this.toStr(d);
+                if (this.blocked.includes(str)) return str;
+            }
+            return null;
+        },
+
         canNext() {
             if (this.step === 1) return !!this.form.category;
-            if (this.step === 2) return !!this.form.date;
+            if (this.step === 2) {
+                if (!this.form.date) return false;
+                if (this.checkBlockedSelection()) return false;
+                return true;
+            }
             return true;
         },
         hint() {
-            if (this.step === 2 && !this.form.date) return 'Pilih tanggal mulai untuk lanjut';
+            if (this.step === 2) {
+                if (!this.form.date) return 'Pilih tanggal mulai untuk lanjut';
+                const bad = this.firstBlockedInRange();
+                if (bad) return '⚠️ Tanggal ' + this.formatDate(bad) + ' sudah ditutup. Kurangi durasi atau ganti tanggal mulai.';
+            }
             return '';
         },
         nextLabel() {
@@ -708,8 +805,7 @@ function bookingWizard() {
             if (!this.form.date) return '';
             const d = new Date(this.form.date + 'T00:00:00');
             d.setDate(d.getDate() + this.form.duration - 1);
-            const pad = n => String(n).padStart(2, '0');
-            return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+            return this.toStr(d);
         },
 
         getQty(id) { return this.form.products[id] || 0; },

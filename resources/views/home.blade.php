@@ -396,101 +396,86 @@
 
 
 <!-- Section FAQ -->
-<section class="py-20 bg-white">
-    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+<section class="py-16 bg-white">
+    <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
         
         <!-- Header Section -->
-        <div class="text-center mb-12">
-            <span class="text-xs font-semibold uppercase tracking-wider text-n-primary bg-n-primary/10 px-3 py-1 rounded-full">
-                BANTUAN & INFORMASI
-            </span>
-            <h2 class="text-3xl font-bold text-n-charcoal mt-3">
+        <div class="text-center mb-10">
+            <h2 class="text-2xl font-bold text-n-charcoal">
                 Frequently Asked Questions
             </h2>
             <p class="text-n-gray text-sm mt-2">
-                Temukan jawaban atas pertanyaan seputar reservasi dan layanan di Needs Study Space.
+                Bantuan & informasi seputar layanan Needs Study Space.
             </p>
         </div>
 
-        <!-- Accordion List (Alpine.js state: open = null / index) -->
-        <div class="space-y-4" x-data="{ activeAccordion: 0 }">
+        <!-- Accordion List (Tanpa Animasi Transisi) -->
+        <div class="border-t border-n-border" x-data="{ activeAccordion: null }">
 
             <!-- FAQ Item 1 -->
-            <div class="bg-n-bg/60 border border-n-border rounded-2xl transition-all overflow-hidden"
-                 :class="{ 'border-l-4 border-l-n-primary shadow-sm bg-white': activeAccordion === 0 }">
+            <div class="border-b border-n-border">
                 <button @click="activeAccordion = activeAccordion === 0 ? null : 0" 
-                        class="w-full flex items-center justify-between p-6 text-left focus:outline-none">
-                    <span class="font-semibold text-n-charcoal text-base">
+                        class="w-full flex items-center justify-between py-5 text-left focus:outline-none">
+                    <span class="font-medium text-n-charcoal text-base">
                         Bagaimana cara melakukan reservasi ruangan di Needs Study Space?
                     </span>
-                    <div class="w-8 h-8 rounded-full bg-n-primary text-white flex items-center justify-center flex-shrink-0 ml-4 transform transition-transform duration-300 ease-in-out" 
-                        :class="{ 'rotate-180': activeAccordion === 0 }">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                        </svg>
-                    </div>
+                    <span class="text-n-primary ml-4">
+                        <svg x-show="activeAccordion !== 0" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        <svg x-show="activeAccordion === 0" x-cloak class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path></svg>
+                    </span>
                 </button>
-                <div x-show="activeAccordion === 0" x-collapse x-cloak class="px-6 pb-6 text-n-gray text-sm leading-relaxed">
+                <div x-show="activeAccordion === 0" x-cloak class="pb-5 text-n-gray text-sm leading-relaxed">
                     Anda cukup masuk ke halaman utama, pilih menu <strong>Booking</strong>, tentukan tipe ruangan yang diinginkan, pilih tanggal serta durasi sewa, lalu ikuti instruksi pengisian data diri hingga proses pembayaran selesai secara mandiri <b>(Self-Service)</b>.
                 </div>
             </div>
 
             <!-- FAQ Item 2 -->
-            <div class="bg-n-bg/60 border border-n-border rounded-2xl transition-all overflow-hidden"
-                 :class="{ 'border-l-4 border-l-n-primary shadow-sm bg-white': activeAccordion === 1 }">
+            <div class="border-b border-n-border">
                 <button @click="activeAccordion = activeAccordion === 1 ? null : 1" 
-                        class="w-full flex items-center justify-between p-6 text-left focus:outline-none">
-                    <span class="font-semibold text-n-charcoal text-base">
+                        class="w-full flex items-center justify-between py-5 text-left focus:outline-none">
+                    <span class="font-medium text-n-charcoal text-base">
                         Apa syarat untuk mendapatkan tarif khusus Mahasiswa?
                     </span>
-                    <div class="w-8 h-8 rounded-full bg-n-primary text-white flex items-center justify-center flex-shrink-0 ml-4 transform transition-transform duration-300 ease-in-out"
-                        :class="{ 'rotate-180': activeAccordion === 1 }">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                        </svg>
-                    </div>
+                    <span class="text-n-primary ml-4">
+                        <svg x-show="activeAccordion !== 1" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        <svg x-show="activeAccordion === 1" x-cloak class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path></svg>
+                    </span>
                 </button>
-                <div x-show="activeAccordion === 1" x-collapse x-cloak class="px-6 pb-6 text-n-gray text-sm leading-relaxed">
+                <div x-show="activeAccordion === 1" x-cloak class="pb-5 text-n-gray text-sm leading-relaxed">
                     Saat memilih kategori pengunjung "Mahasiswa", Anda diwajibkan mengunggah foto Kartu Tanda Mahasiswa (KTM) yang valid pada formulir pemesanan. File KTM akan diverifikasi secara privat oleh admin kami.
                 </div>
             </div>
 
             <!-- FAQ Item 3 -->
-            <div class="bg-n-bg/60 border border-n-border rounded-2xl transition-all overflow-hidden"
-                 :class="{ 'border-l-4 border-l-n-primary shadow-sm bg-white': activeAccordion === 2 }">
+            <div class="border-b border-n-border">
                 <button @click="activeAccordion = activeAccordion === 2 ? null : 2" 
-                        class="w-full flex items-center justify-between p-6 text-left focus:outline-none">
-                    <span class="font-semibold text-n-charcoal text-base">
+                        class="w-full flex items-center justify-between py-5 text-left focus:outline-none">
+                    <span class="font-medium text-n-charcoal text-base">
                         Bagaimana cara mengecek status booking tanpa harus login?
                     </span>
-                    <div class="w-8 h-8 rounded-full bg-n-primary text-white flex items-center justify-center flex-shrink-0 ml-4 transform transition-transform duration-300 ease-in-out"
-                        :class="{ 'rotate-180': activeAccordion === 2 }">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                        </svg>
-                    </div>
+                    <span class="text-n-primary ml-4">
+                        <svg x-show="activeAccordion !== 2" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        <svg x-show="activeAccordion === 2" x-cloak class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path></svg>
+                    </span>
                 </button>
-                <div x-show="activeAccordion === 2" x-collapse x-cloak class="px-6 pb-6 text-n-gray text-sm leading-relaxed">
+                <div x-show="activeAccordion === 2" x-cloak class="pb-5 text-n-gray text-sm leading-relaxed">
                     Sistem kami menggunakan penyimpanan berbasis <b>Cookie</b> perangkat dan pencarian mandiri. Anda bisa masuk ke menu <strong>Cek Status</strong> lalu masukkan kode booking atau nomor telepon yang Anda gunakan saat memesan.
                 </div>
             </div>
 
             <!-- FAQ Item 4 -->
-            <div class="bg-n-bg/60 border border-n-border rounded-2xl transition-all overflow-hidden"
-                 :class="{ 'border-l-4 border-l-n-primary shadow-sm bg-white': activeAccordion === 3 }">
+            <div class="border-b border-n-border">
                 <button @click="activeAccordion = activeAccordion === 3 ? null : 3" 
-                        class="w-full flex items-center justify-between p-6 text-left focus:outline-none">
-                    <span class="font-semibold text-n-charcoal text-base">
+                        class="w-full flex items-center justify-between py-5 text-left focus:outline-none">
+                    <span class="font-medium text-n-charcoal text-base">
                         Metode pembayaran apa saja yang didukung?
                     </span>
-                    <div class="w-8 h-8 rounded-full bg-n-primary text-white flex items-center justify-center flex-shrink-0 ml-4 transform transition-transform duration-300 ease-in-out"
-                        :class="{ 'rotate-180': activeAccordion === 3 }">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                        </svg>
-                    </div>
+                    <span class="text-n-primary ml-4">
+                        <svg x-show="activeAccordion !== 3" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        <svg x-show="activeAccordion === 3" x-cloak class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path></svg>
+                    </span>
                 </button>
-                <div x-show="activeAccordion === 3" x-collapse x-cloak class="px-6 pb-6 text-n-gray text-sm leading-relaxed">
+                <div x-show="activeAccordion === 3" x-cloak class="pb-5 text-n-gray text-sm leading-relaxed">
                     Kami mendukung pembayaran digital secara instan melalui integrasi <em>payment gateway</em> (Midtrans) seperti QRIS, Transfer Virtual Account bank utama, e-wallet, serta fitur simulasi pembayaran instan untuk pengujian sistem.
                 </div>
             </div>

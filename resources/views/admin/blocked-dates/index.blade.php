@@ -44,10 +44,10 @@
                     class="w-full px-3 py-2.5 border border-n-border rounded-xl text-sm focus:outline-none focus:border-n-primary">
             </div>
             <div class="flex items-end">
-                <button type="submit"
-                        class="w-full sm:w-auto px-6 py-2.5 bg-n-primary text-white rounded-xl text-sm font-semibold hover:bg-n-primary/90 transition-colors">
-                    Tutup Tanggal
-                </button>
+            <button type="submit"
+                    class="w-full sm:w-auto px-6 py-2.5 text-white rounded-xl text-sm font-semibold transition-colors hover:opacity-90" style="background-color: #b1002c;">
+                Tutup Tanggal
+            </button>
             </div>
         </form>
     </div>

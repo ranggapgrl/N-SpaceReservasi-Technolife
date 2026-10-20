@@ -183,7 +183,7 @@
             @click.away="open = false" @keydown.escape.window="open = false">
         <div class="nv-wrap">
             <div class="nv-bar">
-                <a href="{{ url('/') }}" class="nv-brand" @click="goHome($event)">Needs Study Space<span style="color: #DC143C;">.</span></a>
+                <a href="{{ url('/') }}" class="nv-brand" @click="goHome($event)">Needs Study <span style="color: #DC143C;">Space</span></a>
     
                 <ul class="nv-links">
                     <li><a href="{{ url('/') }}" @click="goHome($event)" class="nv-link {{ $navCurrent === 'home' ? 'is-active' : '' }}"
@@ -343,7 +343,6 @@
             };
         }
     </script>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
 </body>
 </html>
