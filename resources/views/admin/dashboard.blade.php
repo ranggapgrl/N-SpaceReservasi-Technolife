@@ -13,6 +13,13 @@
     $monthStart = Carbon::parse($currentMonth ?? Carbon::now())->startOfMonth();
     $monthEnd = $monthStart->copy()->endOfMonth();
     $leadBlanks = $monthStart->dayOfWeekIso - 1;
+    // Kalender membuka bulan berjalan pada hari ini, atau tanggal pertama untuk bulan lain.
+    $calendarSelectedDate = $today->isSameMonth($monthStart)
+        ? $today->format('Y-m-d')
+        : $monthStart->format('Y-m-d');
+    // Tautan navigasi bulan menggunakan salinan agar tanggal acuan tidak ikut berubah.
+    $previousMonth = $monthStart->copy()->subMonth();
+    $nextMonth = $monthStart->copy()->addMonth();
 
     $statusMap = [
         'confirmed' => ['Terkonfirmasi', 'bg-emerald-50 text-emerald-700 ring-emerald-600/15'],
@@ -23,7 +30,9 @@
     $hatch = 'background-image:repeating-linear-gradient(135deg,transparent 0 7px,rgba(177,0,44,.08) 7px 8px)';
 @endphp
 
-<div class="mx-auto max-w-7xl space-y-10 pb-12" x-data="{ showCalendarModal: false }"
+{{-- Alpine mengatur buka/tutup modal dan menyimpan tanggal yang sedang dipilih. --}}
+<div class="mx-auto max-w-7xl space-y-10 pb-12"
+    x-data="{ showCalendarModal: {{ request()->filled('month') ? 'true' : 'false' }}, selectedCalendarDate: '{{ $calendarSelectedDate }}' }"
      @keydown.escape.window="showCalendarModal = false">
 
     {{-- Sapaan dan pintasan menuju daftar booking. --}}
@@ -31,7 +40,7 @@
         <div>
             <p class="text-sm font-semibold uppercase tracking-[0.16em] text-[#b1002c]">Ringkasan operasional</p>
             <h2 class="mt-2 text-3xl font-semibold tracking-tight text-[#1b1c1c] sm:text-4xl">
-                Selamat datang, {{ Auth::user()->name }}
+                Selamat datang, di <span style="color:#DC143C ">NEEDS </span> study space Admin
             </h2>
             <p class="mt-2 text-sm text-gray-500">
                 Pantau aktivitas dan kebutuhan hari ini, {{ $today->translatedFormat('l, d F Y') }}.
@@ -137,11 +146,10 @@
             @foreach($weekDays as $date)
                 @php
                     $dateStr = $date->format('Y-m-d');
-                    $isClosed = isset($blockedDates[$dateStr]);
-                    $reason = $blockedDates[$dateStr] ?? null;
-                    $bookings = $dailyBookings[$dateStr] ?? 0;
+                    $isClosed = isset($weeklyBlockedDates[$dateStr]);
+                    $reason = $weeklyBlockedDates[$dateStr] ?? null;
+                    $bookings = $weeklyBookings[$dateStr] ?? 0;
                     $isToday = $date->isToday();
-                    $hasMonthData = $date->isSameMonth($monthStart);
                 @endphp
                 <li class="relative min-h-36 rounded-xl border p-4 {{ $isClosed ? 'border-rose-200 bg-rose-50/70' : ($isToday ? 'border-[#b1002c]/40 bg-rose-50/40' : 'border-gray-200 bg-white') }}"
                     @if($isClosed) style="{{ $hatch }}" @endif
@@ -162,10 +170,7 @@
                     </div>
 
                     <div class="mt-5 border-t border-gray-200/80 pt-3">
-                        @if(!$hasMonthData)
-                            <p class="text-sm font-semibold text-gray-700">Perlu dicek</p>
-                            <p class="mt-1 text-xs text-gray-500">Di luar data bulan ini</p>
-                        @elseif($isClosed)
+                        @if($isClosed)
                             <p class="text-sm font-semibold text-rose-700">Ditutup</p>
                             @if($reason)
                                 <p class="mt-1 break-words text-xs text-rose-700/80">{{ $reason }}</p>
@@ -254,7 +259,7 @@
         </div>
     </section>
 
-    {{-- Kalender bulanan untuk melihat booking dan tanggal yang ditutup. --}}
+    {{-- Kalender bulanan interaktif: modal terbuka saat tombol kalender dipilih atau bulan dinavigasi. --}}
     <div x-show="showCalendarModal" x-cloak
         class="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/50 p-4"
         x-transition.opacity.duration.200ms>
@@ -265,11 +270,34 @@
             x-transition:enter-start="translate-y-3 opacity-0"
             x-transition:enter-end="translate-y-0 opacity-100">
             <div class="flex items-center justify-between border-b border-gray-200 px-5 py-4 sm:px-6">
-                <div>
-                    <p class="text-xs font-semibold uppercase tracking-[0.14em] text-[#b1002c]">Kalender ketersediaan</p>
-                    <h3 id="calendar-title" class="mt-1 text-lg font-semibold text-[#1b1c1c]">
-                        {{ $monthStart->translatedFormat('F Y') }}
-                    </h3>
+                {{-- Navigasi ini memuat ulang dashboard dengan parameter bulan yang dipilih. --}}
+                <div class="flex min-w-0 items-center gap-2 sm:gap-3">
+                    <a href="{{ route('admin.dashboard', ['month' => $previousMonth->format('Y-m')]) }}"
+                       aria-label="Lihat bulan {{ $previousMonth->translatedFormat('F Y') }}"
+                       class="rounded-lg border border-gray-200 p-2 text-gray-600 transition-colors hover:border-gray-300 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#b1002c]">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6"/>
+                        </svg>
+                    </a>
+                    <div class="min-w-0 text-center">
+                        <p class="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#b1002c] sm:text-xs">Kalender operasional</p>
+                        <h3 id="calendar-title" class="mt-0.5 truncate text-base font-semibold text-[#1b1c1c] sm:text-lg">
+                            {{ $monthStart->translatedFormat('F Y') }}
+                        </h3>
+                    </div>
+                    <a href="{{ route('admin.dashboard', ['month' => $nextMonth->format('Y-m')]) }}"
+                       aria-label="Lihat bulan {{ $nextMonth->translatedFormat('F Y') }}"
+                       class="rounded-lg border border-gray-200 p-2 text-gray-600 transition-colors hover:border-gray-300 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#b1002c]">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/>
+                        </svg>
+                    </a>
+                    @if(!$monthStart->isSameMonth($today))
+                        <a href="{{ route('admin.dashboard', ['month' => $today->format('Y-m')]) }}"
+                           class="hidden whitespace-nowrap rounded-lg px-2 py-2 text-xs font-semibold text-[#b1002c] hover:bg-rose-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#b1002c] sm:inline-flex">
+                            Bulan ini
+                        </a>
+                    @endif
                 </div>
                 <button type="button" @click="showCalendarModal = false" aria-label="Tutup kalender"
                         class="rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#b1002c]">
@@ -280,6 +308,7 @@
             </div>
 
             <div class="flex-1 overflow-y-auto p-4 sm:p-6">
+                {{-- Kisi kalender dimulai Senin dan sel kosong menyelaraskan tanggal pertama bulan. --}}
                 <div class="grid grid-cols-7 border-l border-t border-gray-200 text-center text-xs text-gray-500">
                     @foreach(['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'] as $dayName)
                         <div class="border-b border-r border-gray-200 bg-gray-50 py-2 font-semibold">{{ $dayName }}</div>
@@ -297,19 +326,88 @@
                             $monthDateBookings = $dailyBookings[$monthDateString] ?? 0;
                             $monthDateIsToday = $monthDate->isToday();
                         @endphp
-                        <div class="relative min-h-[4.5rem] border-b border-r border-gray-200 p-1.5 text-left sm:p-2"
-                            @if($monthDateClosed) style="{{ $hatch }}" title="Ditutup{{ $monthDateReason ? ': '.$monthDateReason : '' }}" @endif>
+                        {{-- Setiap tanggal dapat dipilih dan menampilkan status tutup serta jumlah booking. --}}
+                        <button type="button"
+                               @click="selectedCalendarDate = '{{ $monthDateString }}'"
+                               :aria-pressed="selectedCalendarDate === '{{ $monthDateString }}'"
+                               aria-label="{{ $monthDate->translatedFormat('l, d F Y') }}{{ $monthDateClosed ? ', tanggal ditutup' : ', '.($monthDateBookings ?: 'belum ada').' booking terkonfirmasi' }}"
+                               class="relative min-h-[4.5rem] w-full border-b border-r border-gray-200 p-1.5 text-left transition-colors hover:bg-gray-50 focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#b1002c] sm:p-2
+                                   {{ $monthDateClosed ? 'bg-rose-50/70' : 'bg-white' }}
+                                   {{ $monthDateIsToday ? 'font-semibold' : '' }}"
+                               :class="selectedCalendarDate === '{{ $monthDateString }}' ? 'z-10 ring-2 ring-inset ring-[#b1002c]' : ''"
+                               @if($monthDateClosed) style="{{ $hatch }}" title="Ditutup{{ $monthDateReason ? ': '.$monthDateReason : '' }}" @endif>
                             <span class="inline-flex h-6 min-w-6 items-center justify-center rounded-full px-1 text-sm tabular-nums
-                                {{ $monthDateIsToday ? 'bg-[#b1002c] font-semibold text-white' : 'text-gray-700' }}">{{ $monthDate->format('j') }}</span>
+                               {{ $monthDateIsToday ? 'bg-[#b1002c] text-white' : 'text-gray-700' }}">{{ $monthDate->format('j') }}</span>
 
                             @if($monthDateClosed)
-                                <p class="mt-1 text-[10px] font-semibold text-rose-700 sm:text-xs">Ditutup</p>
+                               <span class="mt-1 block text-[10px] font-semibold text-rose-700 sm:text-xs">Ditutup</span>
                             @elseif($monthDateBookings > 0)
-                                <p class="mt-1 text-[10px] text-gray-700 sm:text-xs"><span class="font-semibold tabular-nums">{{ $monthDateBookings }}</span> booking</p>
+                               <span class="mt-1 block text-[10px] text-gray-700 sm:text-xs"><span class="font-semibold tabular-nums">{{ $monthDateBookings }}</span> booking</span>
+                            @else
+                               <span class="mt-1 block text-[10px] text-gray-400 sm:text-xs">Kosong</span>
+                            @endif
+                        </button>
+                    @endforeach
+                </div>
+
+                {{-- Panel ini menampilkan alasan tanggal ditutup dan booking yang dapat dibuka untuk detail. --}}
+                <section aria-label="Detail booking tanggal terpilih" class="mt-5 rounded-xl border border-gray-200 bg-gray-50 p-4 sm:p-5">
+                    @foreach(CarbonPeriod::create($monthStart, $monthEnd) as $monthDate)
+                        @php
+                            $monthDateString = $monthDate->format('Y-m-d');
+                            $monthDateClosed = isset($blockedDates[$monthDateString]);
+                            $monthDateReason = $blockedDates[$monthDateString] ?? null;
+                            $monthDateBookings = $dailyBookings[$monthDateString] ?? 0;
+                            $dateBookings = $calendarBookings->get($monthDateString, collect());
+                        @endphp
+                        <div x-show="selectedCalendarDate === '{{ $monthDateString }}'" x-cloak>
+                            <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                               <div>
+                                   <p class="text-xs font-semibold uppercase tracking-[0.12em] text-gray-500">Detail tanggal terpilih</p>
+                                   <h4 class="mt-1 font-semibold text-[#1b1c1c]">
+                                       {{ $monthDate->translatedFormat('l, d F Y') }}
+                                   </h4>
+                               </div>
+                               @if($monthDateClosed)
+                                   <span class="w-fit rounded-full bg-rose-100 px-3 py-1 text-xs font-semibold text-rose-800">Tanggal ditutup</span>
+                               @else
+                                   <span class="w-fit rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-800">Tanggal tersedia</span>
+                               @endif
+                            </div>
+
+                            @if($monthDateClosed && $monthDateReason)
+                               <p class="mt-3 text-sm text-rose-800">Alasan: {{ $monthDateReason }}</p>
+                            @endif
+
+                            <p class="mt-3 text-sm text-gray-600">
+                               {{ $monthDateBookings }} booking terkonfirmasi pada tanggal ini.
+                            </p>
+
+                            @if($dateBookings->isNotEmpty())
+                               <ul class="mt-4 max-h-52 divide-y divide-gray-200 overflow-y-auto rounded-lg border border-gray-200 bg-white">
+                                   @foreach($dateBookings as $dateBooking)
+                                       <li class="flex flex-col gap-2 px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-4">
+                                           <div class="min-w-0">
+                                               <p class="truncate text-sm font-semibold text-[#1b1c1c]">{{ $dateBooking->customer_name }}</p>
+                                               <p class="mt-0.5 text-xs text-gray-500">
+                                                   {{ $dateBooking->booking_code }} · {{ ucfirst($dateBooking->status) }} · Rp{{ number_format($dateBooking->total_price, 0, ',', '.') }}
+                                               </p>
+                                           </div>
+                                           <a href="{{ route('admin.bookings.show', $dateBooking) }}"
+                                              class="w-fit whitespace-nowrap text-xs font-semibold text-[#b1002c] underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#b1002c]">
+                                               Buka booking
+                                           </a>
+                                       </li>
+                                   @endforeach
+                               </ul>
+                            @else
+                               <p class="mt-4 rounded-lg border border-dashed border-gray-300 bg-white px-4 py-5 text-center text-sm text-gray-500">
+                                   Belum ada booking untuk tanggal ini.
+                               </p>
                             @endif
                         </div>
                     @endforeach
-                </div>
+                </section>
 
                 <div class="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-xs text-gray-600">
                     <span class="inline-flex items-center gap-2">
@@ -318,7 +416,7 @@
                     <span class="inline-flex items-center gap-2">
                         <span class="h-3 w-3 rounded-sm border border-rose-200" style="{{ $hatch }}"></span>Tanggal ditutup
                     </span>
-                    <span>Angka menunjukkan booking terkonfirmasi.</span>
+                    <span>Pilih tanggal untuk melihat booking dan status operasional.</span>
                 </div>
             </div>
 
