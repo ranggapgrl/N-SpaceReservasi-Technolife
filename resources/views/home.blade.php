@@ -219,7 +219,7 @@
     <div class="nss-container">
 
         <div class="nss-sec-head reveal-up">
-            <h2 class="nss-display nss-h2">Area di dalam Needs Study Space</h2>
+            <h2 class="nss-display nss-h2">Area di dalam <span style="color: #DC143C">NEEDS </span> study space</h2>
             <p>Semua area ada dalam satu tempat dan berlaku dengan tarif yang sama. Saat memesan, yang dipilih hanya tarifnya.</p>
         </div>
 

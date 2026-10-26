@@ -1,0 +1,6 @@
+# Aturan Desain Frontend (Anti-AI Slop)
+Setiap kali kamu membuat, merubah, atau merefaktor kode tampilan frontend (HTML, Blade, React, Tailwind CSS, dll):
+- **Dilarang keras** menggunakan gaya AI generik: hindari gradasi warna ungu-biru neon yang berlebihan, sudut elemen yang seragam secara kaku (`rounded-2xl` di semua tempat), atau border abu-abu tipis yang monoton.
+- **Gunakan palet bersih & solid:** Latar belakang solid (`bg-slate-50` atau `bg-zinc-950`) dengan satu warna *accent* utama yang kuat untuk tombol dan sorotan.
+- **Perhatikan Spasi & Tipografi:** Berikan jarak antar section yang longgar (`py-24` atau `py-32`) agar web terasa luas dan bernapas, serta buat kontras ukuran font yang tegas.
+- **Komponen Fungsional:** Jangan buat kartu metrik kosong atau hiasan *dummy* yang repetitif. Pastikan setiap komponen bersih dan terlihat seperti produk SaaS profesional.

@@ -183,7 +183,7 @@
             @click.away="open = false" @keydown.escape.window="open = false">
         <div class="nv-wrap">
             <div class="nv-bar">
-                <a href="{{ url('/') }}" class="nv-brand" @click="goHome($event)">Needs Study <span style="color: #DC143C;">Space</span></a>
+                <a href="{{ url('/') }}" class="nv-brand" @click="goHome($event)">NEEDS study <span style="color: #DC143C;">space</span></a>
     
                 <ul class="nv-links">
                     <li><a href="{{ url('/') }}" @click="goHome($event)" class="nv-link {{ $navCurrent === 'home' ? 'is-active' : '' }}"

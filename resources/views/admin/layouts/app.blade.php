@@ -26,7 +26,7 @@
         >
             <!-- Logo -->
             <div class="h-20 flex items-center px-6 border-b border-gray-100 flex-shrink-0 justify-between">
-                <h2 class="font-bold text-xl tracking-wide font-headline text-[#1b1c1c]">Needs Study <span style="color: #b1002c">Space</span><span style="color: #b1002c;">.</span></h2>
+                <h2 class="font-bold text-xl tracking-wide font-headline text-[#1b1c1c]">NEEDS study <span style="color: #b1002c">space</span><span style="color: #b1002c;">.</span></h2>
                 <button @click="sidebarOpen = false" class="md:hidden text-gray-400 hover:text-gray-600">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>

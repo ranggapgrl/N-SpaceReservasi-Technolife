@@ -125,13 +125,12 @@
         {{-- ══ TABEL BOOKING ══ --}}
         <div class="mt-6 overflow-hidden rounded-xl border border-n-border bg-white">
             <div class="overflow-x-auto">
-                <table class="w-full min-w-[980px] text-left text-sm">
+                <table class="w-full min-w-[900px] text-left text-sm">
                     <thead class="border-b border-n-border bg-n-bg text-n-gray">
                         <tr>
                             <th scope="col" class="px-4 py-3 font-medium">Kode booking</th>
                             <th scope="col" class="px-4 py-3 font-medium">Pelanggan</th>
                             <th scope="col" class="px-4 py-3 font-medium">Kategori</th>
-                            <th scope="col" class="px-4 py-3 font-medium">Ruangan</th>
                             <th scope="col" class="px-4 py-3 font-medium">Jadwal</th>
                             <th scope="col" class="px-4 py-3 text-right font-medium">Total</th>
                             <th scope="col" class="px-4 py-3 font-medium">Status</th>
@@ -155,7 +154,6 @@
                             <td class="px-4 py-4">
                                 {{ $booking->visitor_category === 'mahasiswa' ? 'Mahasiswa' : 'Umum' }}
                             </td>
-                            <td class="px-4 py-4">{{ $booking->room?->name ?? '-' }}</td>
                             <td class="px-4 py-4">
                                 <p>{{ \Carbon\Carbon::parse($booking->booking_date)->format('d M Y') }}</p>
                                 <p class="text-xs text-n-gray">{{ $booking->duration }} hari</p>
@@ -222,7 +220,7 @@
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="9" class="px-6 py-14 text-center">
+                            <td colspan="8" class="px-6 py-14 text-center">
                                 <p class="font-medium text-n-charcoal">
                                     Tidak ada booking
                                     {{ $status ? "dengan status \"$status\"" : '' }}
