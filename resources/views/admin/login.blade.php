@@ -123,7 +123,7 @@
         </svg>
 
         <header class="page-header">
-            <p class="font-heading brand"><b>Needs Study <span>Space</span></b></p>
+            <p class="font-heading brand"><b><span style="color:#b1002c ">NEEDS </span>study space</b><br> ADMIN</p>
         </header>
 
         <main class="page-main">
