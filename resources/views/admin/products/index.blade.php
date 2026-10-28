@@ -33,7 +33,7 @@
                         <td class="px-6 py-4">
                             <div class="flex items-center space-x-3">
                                 @if($product->image)
-                                    <img src="{{ $product->image }}" alt="{{ $product->name }}"
+                                    <img src="{{ $product->image_url }}" alt="{{ $product->name }}"
                                         class="w-10 h-10 rounded-lg object-cover border border-n-border flex-shrink-0">
                                 @else
                                     <div class="w-10 h-10 rounded-lg bg-n-bg border border-n-border flex items-center justify-center flex-shrink-0">

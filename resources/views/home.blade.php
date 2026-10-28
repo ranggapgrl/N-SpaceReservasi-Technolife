@@ -367,7 +367,9 @@
                 $productNameLower = strtolower($product->name);
                 $localImage = '';
                 
-                if ($loop->index === 3 || str_contains($productNameLower, 'lays') || str_contains($productNameLower, 'chip')) {
+                if ($product->image_url) {
+                    $localImage = $product->image_url;
+                } elseif ($loop->index === 3 || str_contains($productNameLower, 'lays') || str_contains($productNameLower, 'chip')) {
                     $localImage = asset('images/produk/lays.png');
                 } elseif (str_contains($productNameLower, 'butter') || str_contains($productNameLower, 'croissant')) {
                     $localImage = asset('images/produk/Butter.png');
@@ -376,7 +378,7 @@
                 } elseif (str_contains($productNameLower, 'mineral') || str_contains($productNameLower, 'water') || str_contains($productNameLower, 'aqua')) {
                     $localImage = asset('images/produk/mineral.png');
                 } else {
-                    $localImage = $product->image ?: asset('images/produk/coffelate.png');
+                    $localImage = asset('images/produk/coffelate.png');
                 }
             @endphp
             <li class="reveal-up" style="transition-delay: {{ $loop->index * 100 }}ms;">

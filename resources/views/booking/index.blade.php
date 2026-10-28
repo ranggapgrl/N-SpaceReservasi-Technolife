@@ -101,11 +101,11 @@
     .nss-tarif-price .rp  { font-size: .8125rem; font-weight: 600; }
     .nss-tarif-price .per { margin-left: .2rem; font-size: .75rem; font-weight: 500; color: var(--nss-muted); }
 
-    /* Galeri: max-height membatasi tinggi agar tombol Lanjut selalu terlihat.
-       min-height:160px mencegah galeri terlalu kecil di HP sempit. */
+    /* Galeri mobile mengikuti lebar kolom; tinggi dibatasi agar rasio gambar
+       tidak memicu overflow horizontal pada layar sempit. */
     .nss-areas-head { margin-top: .625rem; font-size: .9375rem; font-weight: 600; }
-    .nss-gal-frame { margin-top: .375rem; min-height: 160px; max-height: 200px; aspect-ratio: 16 / 7; }
-    @media (min-width: 640px)  { .nss-gal-frame { max-height: 240px; aspect-ratio: 16 / 6; } }
+    .nss-gal-frame { width: 100%; min-width: 0; height: clamp(10rem, 52vw, 13rem); min-height: 0; max-height: none; margin-top: .375rem; aspect-ratio: auto; }
+    @media (min-width: 640px)  { .nss-gal-frame { height: auto; max-height: 240px; aspect-ratio: 16 / 6; } }
     @media (min-width: 1024px) { .nss-gal-frame { max-height: 280px; aspect-ratio: 16 / 6; } }
     .nss-tabs-wrap { margin-top: .375rem; }
 
@@ -428,7 +428,9 @@
                                         $productNameLower = strtolower($product->name);
                                         $localImage = '';
 
-                                        if ($loop->index === 3 || str_contains($productNameLower, 'lays') || str_contains($productNameLower, 'chip')) {
+                                        if ($product->image_url) {
+                                            $localImage = $product->image_url;
+                                        } elseif ($loop->index === 3 || str_contains($productNameLower, 'lays') || str_contains($productNameLower, 'chip')) {
                                             $localImage = asset('images/produk/lays.png');
                                         } elseif (str_contains($productNameLower, 'butter') || str_contains($productNameLower, 'croissant')) {
                                             $localImage = asset('images/produk/Butter.png');
@@ -437,7 +439,7 @@
                                         } elseif (str_contains($productNameLower, 'mineral') || str_contains($productNameLower, 'water') || str_contains($productNameLower, 'aqua')) {
                                             $localImage = asset('images/produk/mineral.png');
                                         } else {
-                                            $localImage = $product->image ?: asset('images/produk/coffelate.png');
+                                            $localImage = asset('images/produk/coffelate.png');
                                         }
                                     @endphp
                                     <li>

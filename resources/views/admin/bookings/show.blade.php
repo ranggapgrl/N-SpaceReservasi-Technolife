@@ -4,7 +4,17 @@
 
 @section('content')
 
-    <div class="max-w-5xl">
+    <style>
+        .booking-detail-page h1,
+        .booking-detail-page h2,
+        .booking-detail-page h3 {
+            font-family: Poppins, sans-serif;
+        }
+    </style>
+
+    {{-- Token warna dan font hanya berlaku di halaman detail booking, tidak mengubah design system global. --}}
+    <div class="booking-detail-page mx-auto max-w-6xl pb-8"
+         style="--color-n-primary: #B1002C; --color-n-primary-dark: #9F0028; --color-n-bg: #FBF9F8; --color-n-charcoal: #1B1C1C; --color-n-gray: #5C3F3F; --color-n-border: #EAEAEA; --color-green-500: #006622; --color-green-600: #006622; --color-green-700: #006622; --color-emerald-500: #006622; --color-emerald-600: #006622; --color-emerald-700: #006622; --color-red-500: #BA1A1A; --color-red-600: #BA1A1A; --color-red-700: #BA1A1A; --color-red-800: #8F1414; font-family: Inter, sans-serif;">
         <a href="{{ route('admin.bookings.index') }}" class="mb-6 inline-flex items-center rounded-md text-sm text-n-gray transition-colors hover:text-n-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-n-primary">
             <svg class="mr-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
@@ -24,41 +34,38 @@
         </div>
         @endif
 
-        {{-- Header: kode booking, status, dan total --}}
-        <div class="mb-6 flex flex-col gap-6 rounded-xl bg-[#b1002c] p-6 text-white sm:flex-row sm:items-end sm:justify-between sm:p-8">
+        {{-- Ringkasan utama: identitas booking, status, dan total biaya. --}}
+        <div class="mb-6 flex flex-col gap-6 rounded-xl border-l-4 border-n-primary bg-white p-6 shadow-sm sm:flex-row sm:items-end sm:justify-between sm:p-8">
             <div>
-                <p class="mb-1 text-sm text-white/70">Kode Booking</p>
-                <h2 class="text-3xl font-semibold tracking-wider">{{ $booking->booking_code }}</h2>
+                <p class="mb-1 text-sm text-n-gray">Kode booking</p>
+                <h1 class="text-2xl font-semibold tracking-wide text-n-charcoal sm:text-3xl">{{ $booking->booking_code }}</h1>
 
-                <div class="mt-4 flex flex-wrap gap-2 text-sm">
-                    {{-- Status booking --}}
+                <div class="mt-4 flex flex-wrap gap-2 text-xs font-medium sm:text-sm">
                     @if($booking->status === 'confirmed')
-                        <span class="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1"><span class="h-1.5 w-1.5 rounded-full bg-emerald-300"></span>Confirmed</span>
+                        <span class="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-emerald-700"><span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>Dikonfirmasi</span>
                     @elseif($booking->status === 'pending')
-                        <span class="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1"><span class="h-1.5 w-1.5 rounded-full bg-amber-300"></span>Pending</span>
+                        <span class="inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1 text-amber-800"><span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span>Menunggu konfirmasi</span>
                     @else
-                        <span class="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1"><span class="h-1.5 w-1.5 rounded-full bg-gray-300"></span>Cancelled</span>
+                        <span class="inline-flex items-center gap-2 rounded-full bg-gray-100 px-3 py-1 text-gray-700"><span class="h-1.5 w-1.5 rounded-full bg-gray-400"></span>Dibatalkan</span>
                     @endif
 
-                    {{-- Kategori pengunjung (accessor getVisitorCategoryLabelAttribute) --}}
-                    <span class="inline-flex items-center rounded-full bg-white/15 px-3 py-1">{{ $booking->visitor_category_label }}</span>
+                    <span class="inline-flex items-center rounded-full bg-n-bg px-3 py-1 text-n-charcoal">{{ $booking->visitor_category_label }}</span>
 
-                    {{-- Status KTM: hanya untuk mahasiswa yang sudah mengunggah KTM --}}
                     @if($booking->visitor_category === 'mahasiswa' && $booking->ktm_path)
                         @if($booking->ktm_status === 'approved')
-                            <span class="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1"><span class="h-1.5 w-1.5 rounded-full bg-emerald-300"></span>KTM disetujui</span>
+                            <span class="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-emerald-700"><span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>KTM disetujui</span>
                         @elseif($booking->ktm_status === 'rejected')
-                            <span class="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1"><span class="h-1.5 w-1.5 rounded-full bg-rose-200"></span>KTM ditolak</span>
+                            <span class="inline-flex items-center gap-2 rounded-full bg-red-50 px-3 py-1 text-red-700"><span class="h-1.5 w-1.5 rounded-full bg-red-500"></span>KTM ditolak</span>
                         @else
-                            <span class="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1"><span class="h-1.5 w-1.5 rounded-full bg-amber-300"></span>KTM menunggu verifikasi</span>
+                            <span class="inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1 text-amber-800"><span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span>KTM menunggu verifikasi</span>
                         @endif
                     @endif
                 </div>
             </div>
 
-            <div class="sm:text-right">
-                <p class="text-sm text-white/70">Total</p>
-                <p class="mt-1 text-3xl font-semibold tabular-nums">Rp{{ number_format($booking->total_price, 0, ',', '.') }}</p>
+            <div class="border-t border-n-border pt-4 sm:border-0 sm:pt-0 sm:text-right">
+                <p class="text-sm text-n-gray">Total pembayaran</p>
+                <p class="mt-1 text-2xl font-semibold tabular-nums text-n-primary sm:text-3xl">Rp{{ number_format($booking->total_price, 0, ',', '.') }}</p>
             </div>
         </div>
 
@@ -69,9 +76,9 @@
 
                 <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
 
-                    {{-- Customer Info --}}
+                    {{-- Data pelanggan dan jadwal disandingkan agar mudah dipindai. --}}
                     <div class="rounded-xl border border-n-border bg-white p-6">
-                        <h3 class="mb-2 text-base font-semibold text-n-charcoal">Pelanggan</h3>
+                        <h2 class="mb-2 text-base font-semibold text-n-charcoal">Data pelanggan</h2>
                         <dl class="divide-y divide-n-border text-sm">
                             <div class="py-3">
                                 <dt class="text-xs text-n-gray">Nama</dt>
@@ -82,34 +89,34 @@
                                 <dd class="mt-0.5 font-medium text-n-charcoal">{{ $booking->customer_phone }}</dd>
                             </div>
                             <div class="py-3 pb-0">
-                                <dt class="text-xs text-n-gray">Kategori</dt>
+                                <dt class="text-xs text-n-gray">Kategori pengunjung</dt>
                                 <dd class="mt-0.5 font-medium text-n-charcoal">{{ $booking->visitor_category_label }}</dd>
                             </div>
                         </dl>
                     </div>
 
-
-                {{-- Schedule --}}
-                <div class="rounded-xl border border-n-border bg-white p-6">
-                    <h3 class="mb-4 text-base font-semibold text-n-charcoal">Jadwal</h3>
-                    <dl class="grid grid-cols-2 gap-4 sm:grid-cols-4">
-                        <div>
-                            <dt class="mb-1 text-xs text-n-gray">Tanggal</dt>
-                            <dd class="text-sm font-semibold">{{ \Carbon\Carbon::parse($booking->booking_date)->isoFormat('D MMMM Y') }}</dd>
-                        </div>
-                        <div>
-                            <dt class="mb-1 text-xs text-n-gray">Waktu mulai</dt>
-                            <dd class="text-sm font-semibold tabular-nums">{{ \Carbon\Carbon::parse($booking->start_time)->format('H:i') }}</dd>
-                        </div>
-                        <div>
-                            <dt class="mb-1 text-xs text-n-gray">Waktu selesai</dt>
-                            <dd class="text-sm font-semibold tabular-nums">{{ \Carbon\Carbon::parse($booking->end_time)->format('H:i') }}</dd>
-                        </div>
-                        <div>
-                            <dt class="mb-1 text-xs text-n-gray">Durasi</dt>
-                            <dd class="text-sm font-semibold">{{ $booking->duration }} hari</dd>
-                        </div>
-                    </dl>
+                    <div class="rounded-xl border border-n-border bg-white p-6">
+                        <h2 class="mb-4 text-base font-semibold text-n-charcoal">Jadwal penggunaan</h2>
+                        <dl class="grid grid-cols-2 gap-4">
+                            <div>
+                                <dt class="mb-1 text-xs text-n-gray">Tanggal</dt>
+                                <dd class="text-sm font-semibold">{{ \Carbon\Carbon::parse($booking->booking_date)->isoFormat('D MMMM Y') }}</dd>
+                            </div>
+                            <div>
+                                <dt class="mb-1 text-xs text-n-gray">Durasi</dt>
+                                <dd class="text-sm font-semibold">{{ $booking->duration }} hari</dd>
+                            </div>
+                            {{-- Jam selalu ditampilkan dari nilai booking yang tersimpan di database. --}}
+                            <div>
+                                <dt class="mb-1 text-xs text-n-gray">Jam mulai reservasi</dt>
+                                <dd class="text-sm font-semibold tabular-nums">{{ \Carbon\Carbon::parse($booking->start_time)->format('H:i') }}</dd>
+                            </div>
+                            <div>
+                                <dt class="mb-1 text-xs text-n-gray">Jam selesai reservasi</dt>
+                                <dd class="text-sm font-semibold tabular-nums">{{ \Carbon\Carbon::parse($booking->end_time)->format('H:i') }}</dd>
+                            </div>
+                        </dl>
+                    </div>
                 </div>
 
                 {{--
@@ -119,14 +126,15 @@
                 --}}
                 @if($booking->visitor_category === 'mahasiswa')
                 <div class="rounded-xl border border-n-border bg-white p-6">
-                    <h3 class="mb-4 text-base font-semibold text-n-charcoal">Verifikasi KTM mahasiswa</h3>
+                    <h2 class="text-base font-semibold text-n-charcoal">Verifikasi KTM mahasiswa</h2>
+                    <p class="mt-1 text-sm text-n-gray">Periksa dokumen di bawah ini sebelum menyetujui atau menolak.</p>
 
                     @if($booking->ktm_path)
                         <div class="space-y-4">
 
                             {{-- Status KTM saat ini --}}
                             <div class="flex items-center gap-3 text-sm">
-                                <span class="text-n-gray">Status KTM</span>
+                                <span class="text-n-gray">Status dokumen</span>
                                 @if($booking->ktm_status === 'approved')
                                     <span class="inline-flex items-center gap-2 font-medium text-green-700"><span class="h-1.5 w-1.5 rounded-full bg-green-500"></span>Disetujui</span>
                                 @elseif($booking->ktm_status === 'rejected')
@@ -136,24 +144,63 @@
                                 @endif
                             </div>
 
-                            {{-- Lihat KTM: AdminBookingController@viewKtm (storage privat), buka di tab baru --}}
-                            <div>
-                                <a href="{{ route('admin.bookings.ktm.view', $booking) }}"
-                                   target="_blank"
-                                   class="inline-flex items-center gap-2 rounded-lg border border-n-border bg-n-bg px-4 py-2 text-sm font-medium text-n-charcoal transition-colors hover:border-n-primary hover:text-n-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-n-primary">
-                                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                                    </svg>
-                                    Lihat file KTM
-                                </a>
+                            {{-- Pratinjau tetap menggunakan route admin agar file KTM privat tidak menjadi publik. --}}
+                            @php
+                                $ktmExtension = strtolower(pathinfo($booking->ktm_path, PATHINFO_EXTENSION));
+                                $ktmPreviewUrl = route('admin.bookings.ktm.view', $booking);
+                            @endphp
+                            <div class="overflow-hidden rounded-lg border border-n-border bg-n-bg"
+                                 @if(in_array($ktmExtension, ['jpg', 'jpeg', 'png'], true)) x-data="{ previewOpen: false }" @keydown.escape.window="previewOpen = false" @endif>
+                                <div class="border-b border-n-border bg-white px-4 py-3">
+                                    <h3 class="text-sm font-semibold text-n-charcoal">Pratinjau dokumen KTM</h3>
+                                    <p class="mt-1 text-xs text-n-gray">Periksa keterbacaan nama dan foto pada dokumen.</p>
+                                </div>
+                                @if(in_array($ktmExtension, ['jpg', 'jpeg', 'png'], true))
+                                    {{-- Tombol membuka pembesaran tanpa meninggalkan halaman detail booking. --}}
+                                    <button type="button"
+                                            @click="previewOpen = true"
+                                            aria-label="Perbesar pratinjau KTM"
+                                            class="group flex min-h-56 w-full flex-col items-center justify-center gap-2 p-3 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-[#B1002C] sm:p-5">
+                                        <img src="{{ $ktmPreviewUrl }}"
+                                             alt="Pratinjau KTM milik {{ $booking->customer_name }}"
+                                             class="max-h-[28rem] w-full rounded-md object-contain">
+                                        <span class="text-xs font-medium text-[#5C3F3F] group-hover:text-[#B1002C]">Klik gambar untuk melihat lebih dekat</span>
+                                    </button>
+
+                                    <div x-show="previewOpen"
+                                         x-cloak
+                                         x-transition.opacity
+                                         @click.self="previewOpen = false"
+                                         role="dialog"
+                                         aria-modal="true"
+                                         aria-label="Pratinjau KTM ukuran besar"
+                                         class="fixed inset-0 z-[100] flex items-center justify-center bg-[#1B1C1C]/90 p-4 sm:p-8">
+                                        <button type="button"
+                                                @click="previewOpen = false"
+                                                aria-label="Tutup pratinjau"
+                                                class="absolute right-4 top-4 inline-flex h-11 w-11 items-center justify-center rounded-full bg-white text-[#1B1C1C] transition-colors hover:bg-[#FBF9F8] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">
+                                            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                            </svg>
+                                        </button>
+                                        <img src="{{ $ktmPreviewUrl }}"
+                                             alt="Pratinjau KTM ukuran besar milik {{ $booking->customer_name }}"
+                                             class="max-h-[90vh] max-w-full object-contain">
+                                    </div>
+                                @elseif($ktmExtension === 'pdf')
+                                    <iframe src="{{ $ktmPreviewUrl }}"
+                                            title="Pratinjau dokumen KTM milik {{ $booking->customer_name }}"
+                                            class="h-[32rem] w-full bg-white">
+                                    </iframe>
+                                @else
+                                    <p class="p-4 text-sm text-n-gray">Format dokumen ini belum dapat ditampilkan sebagai pratinjau.</p>
+                                @endif
                             </div>
 
                             {{-- Aksi verifikasi (hanya jika belum approved) --}}
                             @if($booking->ktm_status !== 'approved')
                             <div class="flex flex-wrap gap-3">
 
-                                {{-- Setujui KTM: PATCH admin.bookings.ktm.approve --}}
                                 <form action="{{ route('admin.bookings.ktm.approve', $booking) }}" method="POST">
                                     @csrf
                                     @method('PATCH')
@@ -167,7 +214,6 @@
                                     </button>
                                 </form>
 
-                                {{-- Tolak KTM: toggle form alasan penolakan --}}
                                 <button type="button"
                                         onclick="document.getElementById('reject-form').classList.toggle('hidden')"
                                         class="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-white px-5 py-2.5 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600">
@@ -234,11 +280,11 @@
                 </div>
                 @endif
 
-                {{-- Items --}}
+                {{-- Daftar produk tambahan jika termasuk dalam booking. --}}
                 @if($booking->items && $booking->items->count())
                 <div class="overflow-hidden rounded-xl border border-n-border bg-white">
                     <div class="border-b border-n-border px-6 py-4">
-                        <h3 class="text-base font-semibold text-n-charcoal">Item pesanan</h3>
+                        <h2 class="text-base font-semibold text-n-charcoal">Produk tambahan</h2>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="w-full min-w-[480px] text-sm">
@@ -271,10 +317,10 @@
 
                 {{-- Summary & Payment --}}
                 <div class="rounded-xl border border-n-border bg-white p-6">
-                    <h3 class="mb-4 text-base font-semibold text-n-charcoal">Ringkasan pembayaran</h3>
+                    <h2 class="mb-4 text-base font-semibold text-n-charcoal">Rincian pembayaran</h2>
                     <div class="space-y-3 text-sm">
                         <div class="flex justify-between gap-4">
-                            <span class="text-n-gray">Tarif Day Pass ({{ $booking->visitor_category_label }})</span>
+                            <span class="text-n-gray">Biaya Day Pass ({{ $booking->visitor_category_label }})</span>
                             <span class="tabular-nums">Rp{{ number_format($booking->room_price ?? 0, 0, ',', '.') }}</span>
                         </div>
                         @if($booking->product_total > 0)
@@ -284,15 +330,30 @@
                         </div>
                         @endif
                         @if($booking->payment)
+                        @php
+                            // Tampilkan label yang mudah dipahami, bukan kode internal pembayaran.
+                            $paymentMethodLabel = match($booking->payment->payment_method) {
+                                'midtrans' => 'Online (Midtrans)',
+                                'cash_on_site' => 'Tunai di tempat',
+                                default => ucfirst(str_replace('_', ' ', $booking->payment->payment_method ?? '-')),
+                            };
+                            $paymentStatusLabel = match($booking->payment->status) {
+                                'paid' => 'Lunas',
+                                'pending' => 'Menunggu pembayaran',
+                                'failed' => 'Pembayaran gagal',
+                                'expired' => 'Kedaluwarsa',
+                                default => ucfirst(str_replace('_', ' ', $booking->payment->status ?? '-')),
+                            };
+                        @endphp
                         <div class="flex justify-between gap-4">
                             <span class="text-n-gray">Metode</span>
-                            <span>{{ ucfirst($booking->payment->payment_method ?? '-') }}</span>
+                            <span class="text-right font-medium text-n-charcoal">{{ $paymentMethodLabel }}</span>
                         </div>
                         <div class="flex justify-between gap-4">
                             <span class="text-n-gray">Status</span>
                             <span class="inline-flex items-center gap-2 {{ $booking->payment->status === 'paid' ? 'font-medium text-green-600' : 'text-orange-600' }}">
                                 <span class="h-1.5 w-1.5 rounded-full {{ $booking->payment->status === 'paid' ? 'bg-green-500' : 'bg-orange-500' }}"></span>
-                                {{ ucfirst($booking->payment->status ?? '-') }}
+                                {{ $paymentStatusLabel }}
                             </span>
                         </div>
                         @endif
@@ -338,7 +399,7 @@
 
                 {{-- Action Buttons --}}
                 <div class="rounded-xl border border-n-border bg-white p-6">
-                    <h3 class="mb-4 text-base font-semibold text-n-charcoal">Tindakan</h3>
+                    <h2 class="mb-4 text-base font-semibold text-n-charcoal">Tindakan booking</h2>
                     <div class="space-y-3">
                         @if($booking->status !== 'confirmed')
                         <form action="{{ route('admin.bookings.update', $booking) }}" method="POST">
@@ -347,7 +408,7 @@
                             <input type="hidden" name="status" value="confirmed">
                             <button type="submit"
                                     class="w-full rounded-lg bg-green-600 px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-green-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-600">
-                                Konfirmasi booking
+                                Konfirmasi reservasi
                             </button>
                         </form>
                         @endif
@@ -360,7 +421,7 @@
                             <button type="submit"
                                     onclick="return confirm('Yakin ingin membatalkan booking ini?')"
                                     class="w-full rounded-lg border border-red-200 bg-white px-6 py-2.5 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600">
-                                Batalkan booking
+                                Batalkan reservasi
                             </button>
                         </form>
                         @endif
@@ -371,7 +432,7 @@
                             <button type="submit"
                                     onclick="return confirm('Yakin ingin menghapus booking ini? Tindakan ini tidak dapat dibatalkan.')"
                                     class="w-full rounded-lg px-6 py-2 text-sm font-medium text-n-gray transition-colors hover:bg-red-50 hover:text-red-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-red-600">
-                                Hapus booking
+                                Hapus data booking
                             </button>
                         </form>
                     </div>
