@@ -190,7 +190,7 @@
                                     </a>
 
                                     {{-- Tombol Konfirmasi --}}
-c                                    @if($booking->status !== 'confirmed' && $booking->payment?->payment_method === 'cash_on_site' && $booking->payment->status !== 'paid')
+                                    @if($booking->status !== 'confirmed' && $booking->payment?->payment_method === 'cash_on_site' && $booking->payment->status !== 'paid')
                                         <span class="text-xs font-medium text-amber-700">Cek pembayaran di detail</span>
                                     @elseif($booking->status !== 'confirmed')
                                     <form action="{{ route('admin.bookings.update', $booking) }}" method="POST">
