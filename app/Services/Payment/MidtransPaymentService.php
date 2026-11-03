@@ -3,9 +3,12 @@
 namespace App\Services\Payment;
 
 use App\Models\Booking;
+use Carbon\Carbon;
 use Midtrans\Config;
 use Midtrans\Snap;
+use Midtrans\Transaction;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 
 class MidtransPaymentService implements PaymentServiceInterface
 {
@@ -73,24 +76,139 @@ class MidtransPaymentService implements PaymentServiceInterface
 
     public function verifyPayment(array $payload): bool
     {
-        // TODO sebelum produksi: verifikasi signature_key dari Midtrans
-        // (sha512 dari order_id + status_code + gross_amount + server_key).
-        return true;
+        $serverKey = (string) config('services.midtrans.server_key');
+        $signature = $payload['signature_key'] ?? null;
+
+        if (
+            $serverKey === ''
+            || ! is_string($signature)
+            || ! isset($payload['order_id'], $payload['status_code'], $payload['gross_amount'])
+        ) {
+            return false;
+        }
+
+        // Midtrans menandatangani identitas pesanan, kode status, dan nominal notifikasi.
+        $expectedSignature = hash(
+            'sha512',
+            $payload['order_id'].$payload['status_code'].$payload['gross_amount'].$serverKey
+        );
+
+        return hash_equals($expectedSignature, $signature);
     }
 
-    public function processSuccessPayment(Booking $booking, string $paymentMethod = 'qris')
+    public function processNotification(array $payload): bool
     {
-        // Update status booking dan record pembayaran setelah konfirmasi dari Midtrans
+        if (! $this->verifyPayment($payload) || empty($payload['transaction_id'])) {
+            return false;
+        }
+
+        // Gunakan status dari API Midtrans, bukan status transaksi dari browser.
+        $transaction = $this->fetchTransactionStatus($payload['transaction_id']);
+
+        if (
+            ! isset(
+                $transaction->order_id,
+                $transaction->gross_amount,
+                $transaction->transaction_status,
+                $transaction->transaction_id
+            )
+            || (string) $transaction->order_id !== (string) $payload['order_id']
+            || (string) $transaction->transaction_id !== (string) $payload['transaction_id']
+            || ! $this->amountsMatch($transaction->gross_amount, $payload['gross_amount'])
+        ) {
+            return false;
+        }
+
+        $booking = Booking::with('payment')
+            ->where('booking_code', $transaction->order_id)
+            ->first();
+
+        if (! $booking?->payment || ! $this->amountsMatch($booking->payment->amount, $transaction->gross_amount)) {
+            return false;
+        }
+
+        $status = (string) $transaction->transaction_status;
+        $isPaid = $status === 'settlement'
+            || ($status === 'capture' && ($transaction->fraud_status ?? null) === 'accept');
+
+        if ($isPaid) {
+            DB::transaction(function () use ($booking, $transaction): void {
+                $paidAt = $transaction->settlement_time
+                    ?? $transaction->capture_time
+                    ?? now()->toDateTimeString();
+
+                $booking->payment->update([
+                    'status' => 'paid',
+                    'payment_method' => $transaction->payment_type ?? $booking->payment->payment_method,
+                    'transaction_id' => $transaction->transaction_id ?? null,
+                    'paid_at' => Carbon::parse($paidAt),
+                    'verified_at' => now(),
+                ]);
+                $booking->update(['status' => 'confirmed']);
+            });
+
+            return true;
+        }
+
+        if (in_array($status, ['cancel', 'deny', 'expire'], true)) {
+            if ($booking->payment->status !== 'paid') {
+                $booking->payment->update(['status' => 'failed']);
+            }
+
+            return true;
+        }
+
+        if (in_array($status, ['refund', 'partial_refund'], true)) {
+            $booking->payment->update(['status' => $status === 'refund' ? 'refunded' : 'partially_refunded']);
+
+            return true;
+        }
+
+        // Status pending atau capture yang masih ditinjau tidak dihitung sebagai pendapatan.
+        return $status === 'pending' || $status === 'capture';
+    }
+
+    public function processSimulatedPayment(Booking $booking): void
+    {
+        // Pembayaran simulasi boleh menguji alur booking, tetapi tidak boleh masuk laporan pendapatan.
         $booking->update(['status' => 'confirmed']);
 
-        $payment = $booking->payment;
-        if ($payment) {
-            $payment->update([
-                'status'         => 'paid',
-                'payment_method' => $paymentMethod,
-                'transaction_id' => 'TRX-' . time() . '-' . rand(100, 999),
-                'paid_at'        => now(),
-            ]);
-        }
+        $booking->payment?->update([
+            'status' => 'simulated',
+            'payment_method' => 'simulation',
+            'transaction_id' => null,
+            'paid_at' => null,
+        ]);
+    }
+
+    protected function fetchTransactionStatus(string $transactionId): object
+    {
+        return Transaction::status($transactionId);
+    }
+
+    private function amountsMatch(mixed $first, mixed $second): bool
+    {
+        $normalize = static function (mixed $amount): ?string {
+            if (! is_string($amount) && ! is_int($amount) && ! is_float($amount)) {
+                return null;
+            }
+
+            $amount = (string) $amount;
+
+            if (! preg_match('/^\d+(?:\.\d{1,2})?$/', $amount)) {
+                return null;
+            }
+
+            [$whole, $fraction] = array_pad(explode('.', $amount, 2), 2, '');
+
+            return (ltrim($whole, '0') ?: '0').'.'.str_pad($fraction, 2, '0');
+        };
+
+        $normalizedFirst = $normalize($first);
+        $normalizedSecond = $normalize($second);
+
+        return $normalizedFirst !== null
+            && $normalizedSecond !== null
+            && hash_equals($normalizedFirst, $normalizedSecond);
     }
 }

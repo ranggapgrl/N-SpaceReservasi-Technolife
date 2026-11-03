@@ -1,0 +1,23 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::table('payments', function (Blueprint $table) {
+            // Hanya pembayaran yang sudah dikonfirmasi server gateway yang masuk laporan pendapatan.
+            $table->timestamp('verified_at')->nullable()->after('paid_at');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::table('payments', function (Blueprint $table) {
+            $table->dropColumn('verified_at');
+        });
+    }
+};

@@ -15,4 +15,9 @@ interface PaymentServiceInterface
      * Verify a payment status from gateway callback.
      */
     public function verifyPayment(array $payload): bool;
+
+    /**
+     * Verify a gateway notification and synchronize its authoritative status locally.
+     */
+    public function processNotification(array $payload): bool;
 }

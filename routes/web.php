@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\MidtransNotificationController;
 use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\RoomController;
@@ -60,6 +61,9 @@ Route::get('/checkout/simulate-payment/{bookingCode}', [CheckoutController::clas
 // Proses pembayaran simulasi
 Route::post('/checkout/process-payment/{bookingCode}', [CheckoutController::class, 'processPayment'])->name('checkout.process');
 
+// Midtrans memanggil endpoint ini dari servernya, bukan dari form browser.
+Route::post('/midtrans/notification', MidtransNotificationController::class)->name('midtrans.notification');
+
 // ── Cek Status Booking (Tanpa Login) ─────────────────────────────────────────
 Route::get('/booking/check', [BookingController::class, 'checkStatus'])->name('booking.check_status');
 
@@ -106,4 +110,6 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::get('blocked-dates', [BlockedDateController::class, 'index'])->name('blocked-dates.index');
     Route::post('blocked-dates', [BlockedDateController::class, 'store'])->name('blocked-dates.store');
     Route::delete('blocked-dates/{blockedDate}', [BlockedDateController::class, 'destroy'])->name('blocked-dates.destroy');
+    Route::get('revenue', [DashboardController::class, 'revenue'])->name('revenue.index');
+
 });

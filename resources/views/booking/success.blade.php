@@ -4,6 +4,13 @@
 
 @section('content')
 
+@php
+    // Redirect ke halaman ini tidak membuktikan pembayaran; status lunas hanya berasal dari notifikasi server Midtrans.
+    $paymentStatus = $booking->payment?->status;
+    $isPaymentPaid = $paymentStatus === 'paid' && $booking->payment?->verified_at !== null;
+    $isSimulatedPayment = $paymentStatus === 'simulated';
+@endphp
+
 <style>
     @keyframes slideUpFade {
         from { opacity: 0; transform: translateY(20px); }
@@ -42,7 +49,15 @@
                     </svg>
                 </div>
                 <h2 class="text-2xl font-bold text-n-charcoal tracking-tight">NEEDS STUDY SPACE</h2>
-                <p class="text-xs font-medium text-n-gray mt-1 uppercase tracking-wider">Struk Pemesanan & Pembayaran Lunas</p>
+                <p class="text-xs font-medium text-n-gray mt-1 uppercase tracking-wider">
+                    @if($isPaymentPaid)
+                        Struk Pemesanan & Pembayaran Lunas
+                    @elseif($isSimulatedPayment)
+                        Simulasi Pembayaran — Bukan Transaksi Nyata
+                    @else
+                        Booking Tercatat — Menunggu Konfirmasi Pembayaran
+                    @endif
+                </p>
             </div>
 
             @php
@@ -104,11 +119,23 @@
 
             <div class="bg-gray-50 p-5 rounded-xl flex justify-between items-center border border-gray-100 mt-5 mb-2">
                 <div>
-                    <p class="text-xs text-n-gray uppercase tracking-wider font-semibold mb-1">Total Dibayar</p>
-                    <div class="flex items-center gap-1.5">
-                        <span class="flex w-2 h-2 rounded-full bg-green-500"></span>
-                        <span class="text-xs text-green-600 font-medium">Lunas (Midtrans Gateway)</span>
-                    </div>
+                    <p class="text-xs text-n-gray uppercase tracking-wider font-semibold mb-1">
+                        {{ $isPaymentPaid ? 'Total Dibayar' : 'Total Tagihan' }}
+                    </p>
+                    @if($isPaymentPaid)
+                        <div class="flex items-center gap-1.5">
+                            <span class="flex w-2 h-2 rounded-full bg-green-500"></span>
+                            <span class="text-xs text-green-600 font-medium">Lunas — dikonfirmasi Midtrans</span>
+                        </div>
+                    @elseif($isSimulatedPayment)
+                        <span class="text-xs font-medium text-amber-700">Data uji; tidak dihitung sebagai pendapatan</span>
+                    @else
+                        <span class="text-xs font-medium text-amber-700">                        Pembayaran belum memiliki konfirmasi server yang valid</span>
+                        <a href="{{ route('booking.success', $booking->booking_code) }}"
+                           class="mt-2 inline-flex min-h-10 items-center text-sm font-semibold text-n-primary underline underline-offset-4">
+                            Perbarui status pembayaran
+                        </a>
+                    @endif
                 </div>
                 <div class="text-right">
                     <span class="text-2xl font-bold text-n-primary">Rp{{ number_format($booking->total_price, 0, ',', '.') }}</span>
@@ -140,8 +167,15 @@
                 }
             }
 
+            $paymentMessage = $isPaymentPaid
+                ? "Pembayaran saya telah dikonfirmasi oleh Midtrans."
+                : "Mohon bantu cek status booking dan pembayaran saya.";
+            $paymentLabel = $isPaymentPaid
+                ? "LUNAS (dikonfirmasi Midtrans)"
+                : ($isSimulatedPayment ? "SIMULASI (bukan pembayaran nyata)" : "MENUNGGU KONFIRMASI");
+
             $message = "Halo Admin Needs Study Space,%0A%0A" .
-                       "Saya telah menyelesaikan pembayaran otomatis via Midtrans. Berikut detail pesanan saya:%0A%0A" .
+                       "{$paymentMessage} Berikut detail pesanan saya:%0A%0A" .
                        "*DETAIL PEMESANAN*%0A" .
                        "- ID Booking: *{$bookingIdCode}*%0A" .
                        "- Nama: {$customerName}%0A" .
@@ -153,7 +187,7 @@
                        "{$snackText}%0A" .
                        "*PEMBAYARAN*%0A" .
                        "- Total: Rp" . number_format($booking->total_price, 0, ',', '.') . "%0A" .
-                       "- Status: *LUNAS (Otomatis)*%0A%0A" .
+                       "- Status: *{$paymentLabel}*%0A%0A" .
                        "Mohon verifikasinya. Terima kasih!";
 
             $whatsappUrl = "https://wa.me/{$adminPhone}?text=" . $message;

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Booking;
 use App\Models\BlockedDate;
+use App\Models\Payment;
 use Carbon\Carbon;
 
 class DashboardController extends Controller
@@ -17,11 +18,11 @@ class DashboardController extends Controller
             'month' => ['nullable', 'date_format:Y-m'],
         ]);
 
-        // Ringkasan dashboard: pendapatan terkonfirmasi hari ini, booking hari ini,
+        // Ringkasan dashboard: pembayaran lunas untuk kunjungan hari ini, booking hari ini,
         // dan jumlah booking yang masih menunggu pembayaran.
-        $todayRevenue = Booking::whereDate('booking_date', today())
-                        ->where('status', 'confirmed')
-                        ->sum('total_price');
+        $todayRevenue = Payment::verifiedPaid()
+            ->whereHas('booking', fn ($query) => $query->whereDate('booking_date', today()))
+            ->sum('amount');
 
         $pendingBookingsCount = Booking::where('status', 'pending')->count();
         $todayBookingsCount = Booking::whereDate('booking_date', today())->count();
@@ -84,6 +85,42 @@ class DashboardController extends Controller
             'currentMonth',
             'startDate',
             'endDate'
+        ));
+    }
+
+    public function revenue(Request $request)
+    {
+        // Periode tetap mengikuti tanggal booking; hanya pembayaran yang sudah lunas dihitung.
+        $selectedMonth = $request->input('month', Carbon::now()->format('m'));
+        $selectedYear = $request->input('year', Carbon::now()->year);
+
+        $periodPayments = Payment::verifiedPaid()
+            ->whereHas('booking', function ($query) use ($selectedMonth, $selectedYear): void {
+                $query->whereYear('created_at', $selectedYear)
+                    ->whereMonth('created_at', $selectedMonth);
+            });
+
+        // Jumlahkan nominal pada catatan pembayaran, bukan total booking yang belum tentu dibayar.
+        $filteredRevenue = (clone $periodPayments)->sum('amount');
+
+        $yearRevenue = Payment::verifiedPaid()
+            ->whereHas('booking', fn ($query) => $query->whereYear('created_at', $selectedYear))
+            ->sum('amount');
+
+        // Rincian hanya menampilkan booking dengan pembayaran berstatus lunas.
+        $transactions = Booking::with('payment')
+            ->whereYear('created_at', $selectedYear)
+            ->whereMonth('created_at', $selectedMonth)
+            ->whereHas('payment', fn ($query) => $query->verifiedPaid())
+            ->latest()
+            ->paginate(15);
+
+        return view('admin.revenue.index', compact(
+            'filteredRevenue',
+            'yearRevenue',
+            'selectedMonth',
+            'selectedYear',
+            'transactions'
         ));
     }
 }

@@ -267,9 +267,7 @@ public function checkAvailability(Request $request)
     //  success() — Halaman Sukses Booking
     // ═══════════════════════════════════════════════
     /**
-     * CATATAN PENTING:
-     * Status diubah menjadi confirmed hanya berdasarkan redirect dari Midtrans.
-     * TODO sebelum produksi: pindahkan verifikasi ke webhook Midtrans.
+     * Halaman ini hanya menampilkan status booking; konfirmasi lunas dilakukan lewat notifikasi Midtrans.
      */
     public function success($bookingCode)
     {
@@ -277,16 +275,6 @@ public function checkAvailability(Request $request)
                     ->where('booking_code', $bookingCode)
                     ->orWhere('id', $bookingCode)
                     ->firstOrFail();
-
-        if ($booking->status === 'pending') {
-            $booking->update(['status' => 'confirmed']);
-            if ($booking->payment) {
-                $booking->payment->update([
-                    'status'  => 'paid',
-                    'paid_at' => now(),
-                ]);
-            }
-        }
 
         return view('booking.success', compact('booking'));
     }

@@ -21,7 +21,7 @@
         <!-- Header -->
         <div class="border-b border-n-border/40 p-6 text-center">
             <h1 class="font-bold text-lg text-n-charcoal">Secure Checkout</h1>
-            <p class="text-n-gray text-xs mt-1 font-light">Simulated Payment Gateway</p>
+            <p class="text-n-gray text-xs mt-1 font-light">Simulasi khusus lokal/testing — bukan pembayaran nyata</p>
         </div>
 
         <div class="p-8">
