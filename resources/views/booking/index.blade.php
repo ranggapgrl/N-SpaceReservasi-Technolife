@@ -84,6 +84,8 @@
     .nss-bk .nss-label { font-size: .8125rem; margin-bottom: .375rem; display: block; font-weight: 500; }
     .nss-bk .nss-field { width: 100%; box-sizing: border-box; padding: 0 0.875rem; border: 1px solid var(--nss-line); background: #fff; height: 2.75rem; font-size: 1rem; border-radius: 8px; transition: border-color .15s, box-shadow .15s; }
     .nss-bk .nss-field:focus { border-color: var(--nss-primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--nss-primary) 18%, transparent); outline: none; }
+    .nss-time-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .625rem; margin-top: .875rem; }
+    .nss-field-error { margin-top: .25rem; color: #b91c1c; font-size: .75rem; }
     .nss-bk .nss-btn { height: 3rem; padding: 0 1.5rem; font-size: .875rem; min-width: 8rem; border-radius: 8px; }
 
     /* Kartu pilihan tarif: gap dikecilkan agar tombol Lanjut tidak terpotong */
@@ -397,6 +399,36 @@
                                             <span><i></i>Ditutup / penuh</span>
                                         </div>
                                     </div>
+
+                                    <div class="nss-time-fields">
+                                        <div>
+                                            <label for="arrival_time" class="nss-label">Jam kedatangan</label>
+                                            <select id="arrival_time" name="arrival_time" x-model="form.arrival_time"
+                                                @change="if (form.departure_time && form.departure_time <= form.arrival_time) form.departure_time = ''"
+                                                required class="nss-field">
+                                            <option value="">Pilih jam</option>
+                                                <template x-for="time in arrivalTimes" :key="time">
+                                                    <option :value="time" x-text="time"></option>
+                                                </template>
+                                            </select>
+                                            @error('arrival_time')
+                                                <p class="nss-field-error">{{ $message }}</p>
+                                            @enderror
+                                        </div>
+                                        <div>
+                                            <label for="departure_time" class="nss-label">Jam kepulangan</label>
+                                            <select id="departure_time" name="departure_time" x-model="form.departure_time"
+                                                required class="nss-field">
+                                                <option value="">Pilih jam</option>
+                                                <template x-for="time in timeOptions" :key="time">
+                                                    <option :value="time" :disabled="form.arrival_time && time <= form.arrival_time" x-text="time"></option>
+                                                </template>
+                                            </select>
+                                            @error('departure_time')
+                                                <p class="nss-field-error">{{ $message }}</p>
+                                            @enderror
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <div>
@@ -564,6 +596,10 @@
                                     <dt>Mulai</dt>
                                     <dd x-text="formatDate(form.date)"></dd>
                                 </div>
+                                <div class="nss-row" x-show="form.arrival_time && form.departure_time">
+                                    <dt>Jam</dt>
+                                    <dd x-text="form.arrival_time + '–' + form.departure_time"></dd>
+                                </div>
                             </dl>
 
                             <div class="nss-divider"></div>
@@ -621,6 +657,10 @@ function bookingWizard() {
     const PRICES = { mahasiswa: 35000, umum: 55000 };
     const NAMES = { mahasiswa: 'Mahasiswa', umum: 'Umum' };
     const TITLES = ['Pilih tarif', 'Tanggal dan durasi', 'Snack dan minuman', 'Data pemesan'];
+    const TIME_OPTIONS = Array.from({ length: 29 }, (_, index) => {
+        const minutes = 480 + (index * 30);
+        return `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
+    });
     const INTROS = [
         'Satu tarif berlaku untuk semua area di Needs Study Space.',
         'Tentukan tanggal mulai dan berapa hari kamu datang.',
@@ -633,9 +673,10 @@ function bookingWizard() {
     const oldCategory = @json(old('visitor_category', request('tarif', 'mahasiswa')));
     const oldDuration = parseInt(@json(old('duration', 1)), 10);
     const restored = @json((bool) old('visitor_category'));
+    const timeValidationFailed = @json($errors->hasAny(['arrival_time', 'departure_time']));
 
     return {
-        step: restored ? 4 : 1,
+        step: timeValidationFailed ? 2 : (restored ? 4 : 1),
         isSubmitting: false,
         bumped: false,
         area: 0,
@@ -644,6 +685,8 @@ function bookingWizard() {
         touchX: 0,
         areaCount: {{ $roomTypes->count() }},
         labels: ['Tarif', 'Tanggal', 'Tambahan', 'Pemesan'],
+        timeOptions: TIME_OPTIONS,
+        arrivalTimes: TIME_OPTIONS.slice(0, -1),
 
         // Kalender & tanggal ditutup
         blocked: [],
@@ -653,6 +696,8 @@ function bookingWizard() {
         form: {
             category: PRICES[oldCategory] ? oldCategory : 'mahasiswa',
             date: @json(old('date', '')),
+            arrival_time: @json(old('arrival_time', '')),
+            departure_time: @json(old('departure_time', '')),
             duration: oldDuration >= 1 && oldDuration <= 30 ? oldDuration : 1,
             customer_name: @json(old('customer_name', '')),
             customer_phone: @json(old('customer_phone', '')),
@@ -779,6 +824,9 @@ function bookingWizard() {
             if (this.step === 1) return !!this.form.category;
             if (this.step === 2) {
                 if (!this.form.date) return false;
+                if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(this.form.arrival_time)) return false;
+                if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(this.form.departure_time)) return false;
+                if (this.form.departure_time <= this.form.arrival_time) return false;
                 if (this.checkBlockedSelection()) return false;
                 return true;
             }
@@ -787,6 +835,8 @@ function bookingWizard() {
         hint() {
             if (this.step === 2) {
                 if (!this.form.date) return 'Pilih tanggal mulai untuk lanjut';
+                if (!this.form.arrival_time) return 'Pilih jam kedatangan untuk lanjut';
+                if (!this.form.departure_time) return 'Pilih jam kepulangan untuk lanjut';
                 const bad = this.firstBlockedInRange();
                 if (bad) return '⚠️ Tanggal ' + this.formatDate(bad) + ' sudah ditutup. Kurangi durasi atau ganti tanggal mulai.';
             }
