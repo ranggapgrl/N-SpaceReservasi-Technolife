@@ -166,26 +166,29 @@
     .nss-bar-info  { min-width: 0; margin-right: auto; }
     .nss-bar-total { font-size: 1.125rem; font-weight: 700; line-height: 1.2; color: var(--nss-primary); font-variant-numeric: tabular-nums; }
 
-    /* Kartu tiket ringkasan pesanan */
-    .nss-pass { background: #ffffff; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); border: 1px solid var(--nss-line); overflow: hidden; position: relative; }
-    .nss-pass-body  { padding: 1.5rem; }
-    .nss-pass-title { font-size: .875rem; color: var(--nss-muted); margin-bottom: 0.25rem; }
-    .nss-pass-name  { font-size: 1.75rem; font-weight: 800; color: var(--nss-charcoal); margin-bottom: 1.5rem; letter-spacing: -0.03em; }
-    .nss-rows { display: grid; gap: 1rem; font-size: 0.9375rem; }
-    .nss-row  { display: flex; justify-content: space-between; align-items: center; }
+    /* Kartu ringkasan mengikuti contoh visual, sementara rincian tetap tersedia pada langkah lanjutan. */
+    .nss-pass { background: #fff; border: 1px solid #e4e5e7; border-radius: 14px; box-shadow: 0 2px 8px rgba(0, 0, 0, .03); overflow: hidden; color: var(--nss-ink); }
+    .nss-pass-body { padding: 2rem 2.25rem 0; }
+    .nss-pass-title { margin-bottom: 1.25rem; color: var(--nss-muted); font-size: .875rem; }
+    .nss-pass-name { margin-bottom: 2.75rem; color: var(--nss-ink); font-size: 1.75rem; font-weight: 700; letter-spacing: -.03em; }
+    .nss-rows { display: grid; gap: 1rem; font-size: .9375rem; }
+    .nss-row { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
     .nss-row dt { color: var(--nss-muted); font-weight: 400; }
-    .nss-row dd { font-weight: 600; color: var(--nss-charcoal); }
-    .nss-divider { height: 1px; background: var(--nss-line); margin: 1.25rem 0; }
-
-    /* Efek perforasi tiket (garis putus + lubang lingkaran kiri-kanan) */
-    .nss-perf { position: relative; height: 1px; margin: 1.25rem 0; }
-    .nss-perf span { position: absolute; top: 0; left: 1rem; right: 1rem; border-top: 2px dashed var(--nss-line); }
-    .nss-perf::before, .nss-perf::after { content: ""; position: absolute; top: -10px; width: 20px; height: 20px; background: var(--nss-paper); border-radius: 50%; box-shadow: inset 1px 0 0 var(--nss-line); }
-    .nss-perf::before { left: -11px; box-shadow: inset -1px 0 0 var(--nss-line); }
-    .nss-perf::after  { right: -11px; box-shadow: inset 1px 0 0 var(--nss-line); }
-    .nss-pass-foot  { padding: 0.5rem 1.5rem 1.5rem; display: flex; justify-content: space-between; align-items: center; }
-    .nss-total-label { font-size: 0.9375rem; color: var(--nss-muted); font-weight: 400; }
-    .nss-total-price { font-size: 2rem; font-weight: 800; color: var(--nss-primary); letter-spacing: -0.02em; }
+    .nss-row dd { color: var(--nss-ink); font-weight: 600; text-align: right; }
+    .nss-divider { height: 1px; margin: 1rem 0 0; background: #e4e5e7; }
+    .nss-pass-breakdown { padding-top: 1rem; }
+    .nss-pass-breakdown .nss-row dd { font-weight: 400; }
+    .nss-perf { display: none; }
+    .nss-pass-foot { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: 2.75rem 2.25rem 2rem; }
+    .nss-total-label { color: var(--nss-ink); font-size: 1rem; font-weight: 400; }
+    .nss-total-price { color: #dc143c; font-size: clamp(1.5rem, 5vw, 2rem); font-weight: 800; letter-spacing: -.02em; text-align: right; font-variant-numeric: tabular-nums; }
+    .nss-pass:not(.nss-pass--tariff) .nss-pass-name { margin-bottom: 1.5rem; }
+    .nss-pass:not(.nss-pass--tariff) .nss-pass-foot { padding-top: 1.5rem; }
+    @media (max-width: 380px) {
+        .nss-pass-body { padding-inline: 1.25rem; }
+        .nss-pass-foot { padding-inline: 1.25rem; }
+        .nss-total-price { font-size: 1.375rem; }
+    }
 
     /* HP sangat kecil (<380px) */
     @media (max-width: 380px) { .nss-bk .nss-btn { min-width: 0; padding: 0 1.125rem; } .nss-tarif { padding: .75rem; } }
@@ -582,7 +585,7 @@
 
                 <!-- KARTU TICKET -->
                 <aside class="nss-bk-aside" :class="{ 'is-open': step === 2 || step === 4 }" aria-label="Ringkasan pesanan">
-                    <div class="nss-pass">
+                    <div class="nss-pass" :class="{ 'nss-pass--tariff': step === 1 }">
                         <div class="nss-pass-body">
                             <p class="nss-pass-title font-headline">Needs Study Space</p>
                             <h2 class="nss-display nss-pass-name">Day pass</h2>
@@ -604,7 +607,7 @@
 
                             <div class="nss-divider"></div>
 
-                            <dl class="nss-rows">
+                            <dl class="nss-rows nss-pass-breakdown" x-show="step !== 1">
                                 <div class="nss-row">
                                     <dt>Sewa <span x-text="form.duration"></span> hari</dt>
                                     <dd style="font-weight: 400;">Rp<span x-text="formatPrice(pricePerDay() * form.duration)"></span></dd>
@@ -617,8 +620,6 @@
                                 </template>
                             </dl>
                         </div>
-
-                        <div class="nss-perf" aria-hidden="true"><span></span></div>
 
                         <div class="nss-pass-foot" :class="{ 'nss-bump': bumped }">
                             <span class="nss-total-label">Total</span>

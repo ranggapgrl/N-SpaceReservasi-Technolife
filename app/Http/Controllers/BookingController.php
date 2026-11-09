@@ -38,7 +38,7 @@ public function index()
             ->map(fn($rooms) => $rooms->first());
 
         $products = Product::where('is_active', true)->get();
-        
+
         // Ambil daftar tanggal yang diblokir oleh admin
         $blockedDates = BlockedDate::pluck('date')->map(fn($d) => $d->format('Y-m-d'))->toArray();
 
@@ -61,7 +61,7 @@ public function checkAvailability(Request $request)
         for ($i = 0; $i < $duration; $i++) {
             $checkDate = $startDate->copy()->addDays($i)->format('Y-m-d');
             $blocked = BlockedDate::where('date', $checkDate)->first();
-            
+
             if ($blocked) {
                 $reason = $blocked->reason ? " ({$blocked->reason})" : '';
                 return response()->json([
