@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Models\Booking;
-use App\Models\Room;
 use App\Services\Payment\PaymentServiceInterface;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Mockery;
@@ -23,16 +22,16 @@ class BookingTimeSelectionTest extends TestCase
             ->assertSee('name="departure_time"', false);
     }
 
+    public function test_booking_page_defaults_to_one_visitor(): void
+    {
+        $response = $this->get(route('booking.index'));
+
+        $response->assertOk()
+            ->assertSee('name="visitor_count" value="1"', false);
+    }
+
     public function test_booking_persists_selected_arrival_and_departure_times(): void
     {
-        Room::create([
-            'name' => 'Open Space',
-            'type' => 'Coworking Space',
-            'capacity' => 20,
-            'price_per_hour' => 0,
-            'status' => 'active',
-        ]);
-
         $paymentService = Mockery::mock(PaymentServiceInterface::class);
         $paymentService->shouldReceive('createTransaction')
             ->once()
@@ -55,6 +54,7 @@ class BookingTimeSelectionTest extends TestCase
             'customer_name' => 'Test Customer',
             'start_time' => '09:00:00',
             'end_time' => '17:00:00',
+            'visitor_count' => 1,
         ]);
     }
 

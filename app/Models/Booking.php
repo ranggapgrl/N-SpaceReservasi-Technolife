@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-
 class Booking extends Model
 {
     /**
@@ -18,17 +17,6 @@ class Booking extends Model
     // ═══════════════════════════════════════════════
     //  RELASI DATABASE
     // ═══════════════════════════════════════════════
-
-    /**
-     * Relasi many-to-one ke model Room.
-     * Setiap booking terhubung ke satu ruangan.
-     *
-     * Penggunaan: $booking->room->name
-     */
-    public function room()
-    {
-        return $this->belongsTo(Room::class);
-    }
 
     /**
      * Relasi one-to-many ke model BookingItem.
@@ -66,8 +54,8 @@ class Booking extends Model
     {
         return match ($this->visitor_category) {
             'mahasiswa' => 'Mahasiswa',
-            'umum'      => 'Umum',
-            default     => ucfirst($this->visitor_category ?? '-'),
+            'umum' => 'Umum',
+            default => ucfirst($this->visitor_category ?? '-'),
         };
     }
 
@@ -80,10 +68,10 @@ class Booking extends Model
     public function getKtmStatusLabelAttribute(): string
     {
         return match ($this->ktm_status) {
-            'pending'  => 'Menunggu Verifikasi',
+            'pending' => 'Menunggu Verifikasi',
             'approved' => 'Disetujui',
             'rejected' => 'Ditolak',
-            default    => '—', // Tidak ada KTM (pelanggan umum)
+            default => '—', // Tidak ada KTM (pelanggan umum)
         };
     }
 

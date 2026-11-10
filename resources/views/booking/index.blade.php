@@ -222,12 +222,14 @@
     .nss-upload-box { margin-top: .5rem; border: 2px dashed var(--nss-line); border-radius: 10px; padding: 1.25rem 1rem; text-align: center; background: #f8fafa; transition: border-color .2s, background .2s; cursor: pointer; position: relative; }
     .nss-upload-box:hover    { border-color: var(--nss-primary); background: #f0f7f7; }
     .nss-upload-box.has-file { border-color: var(--nss-primary); background: #eef7f5; }
+    .nss-upload-box.has-error { border-color: #b91c1c; }
 
     /* Input file asli disembunyikan (opacity:0). Klik kotak = klik input karena inset:0 */
     .nss-upload-input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
     .nss-upload-icon  { font-size: 2rem; margin-bottom: .375rem; }
     .nss-upload-label { font-size: .875rem; font-weight: 600; color: var(--nss-ink); }
     .nss-upload-hint  { font-size: .75rem; color: var(--nss-muted); margin-top: .25rem; }
+    .nss-ktm-error { margin-top: .5rem; color: #b91c1c; font-size: .875rem; }
 
     .nss-file-preview { display: flex; align-items: center; gap: .5rem; margin-top: .625rem; padding: .5rem .75rem; background: #fff; border: 1px solid var(--nss-line); border-radius: 8px; font-size: .8125rem; }
     .nss-file-preview-name  { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
@@ -265,15 +267,15 @@
         {{-- enctype="multipart/form-data" WAJIB agar file KTM terkirim ke server. --}}
         <form action="{{ route('booking.store') }}" method="POST" id="bookingForm"
             enctype="multipart/form-data"
-            @submit="isSubmitting = true" class="nss-form-wrapper">
+            @submit="submitBooking($event)" class="nss-form-wrapper">
             @csrf
 
             <div class="nss-bk-grid">
 
                 <!-- KONTEN FORM -->
                 <div class="nss-bk-form-inner">
-                    @if(session('error'))
-                    <div role="alert" class="nss-alert">{{ session('error') }}</div>
+                    @if(session('error') || $errors->any())
+                    <div role="alert" class="nss-alert">{{ session('error') ?? $errors->first() }}</div>
                     @endif
 
                     <div x-ref="panel" tabindex="-1" class="nss-panel">
@@ -288,6 +290,7 @@
 
                                 <!-- Diubah menjadi statis open-space -->
                                 <input type="hidden" name="room_type" value="open-space">
+                                <input type="hidden" name="visitor_count" value="{{ old('visitor_count', 1) }}">
 
                                 <fieldset style="border:0;margin:0;padding:0;min-width:0">
                                     <legend class="nss-radio">Pilih tarif</legend>
@@ -518,7 +521,7 @@
                                         Upload KTM <span style="color:#b91c1c" aria-label="wajib">*</span>
                                     </p>
 
-                                    <div class="nss-upload-box" :class="{ 'has-file': ktmFileName }">
+                                    <div class="nss-upload-box" :class="{ 'has-file': ktmFileName, 'has-error': ktmFileError }">
                                         {{-- x-ref="ktmInput" dipakai tombol hapus untuk mereset input file --}}
                                         <input type="file"
                                             name="ktm_file"
@@ -526,8 +529,9 @@
                                             x-ref="ktmInput"
                                             class="nss-upload-input"
                                             accept=".jpg,.jpeg,.png,.pdf"
-                                            :required="form.category === 'mahasiswa'"
-                                            @change="ktmFileName = $event.target.files[0]?.name || ''"
+                                            :aria-invalid="ktmFileError ? 'true' : 'false'"
+                                            aria-describedby="ktm-file-error"
+                                            @change="ktmFileName = $event.target.files[0]?.name || ''; ktmFileError = ''"
                                             aria-label="Upload file KTM">
 
                                         <div x-show="!ktmFileName">
@@ -542,6 +546,8 @@
                                         </div>
                                     </div>
 
+                                    <p id="ktm-file-error" class="nss-ktm-error" x-show="ktmFileError" x-cloak role="alert" x-text="ktmFileError"></p>
+
                                     <div class="nss-file-preview" x-show="ktmFileName" x-cloak>
                                         <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
@@ -549,7 +555,7 @@
                                         <span class="nss-file-preview-name" x-text="ktmFileName"></span>
                                         <button type="button" class="nss-file-preview-clear"
                                                 aria-label="Hapus file"
-                                                @click="ktmFileName = ''; $refs.ktmInput.value = ''">✕</button>
+                                                @click="ktmFileName = ''; $refs.ktmInput.value = ''; ktmFileError = ''">✕</button>
                                     </div>
 
                                     <div class="nss-ktm-info">
@@ -661,6 +667,7 @@ function bookingWizard() {
     return {
         step: timeValidationFailed ? 2 : (restored ? 4 : 1),
         isSubmitting: false,
+        ktmFileError: '',
         bumped: false,
         area: 0,
         galTimer: null,   // timer slideshow galeri foto
@@ -742,6 +749,20 @@ function bookingWizard() {
         },
         nextStep() {
             if (this.canNext()) this.goTo(this.step + 1);
+        },
+        submitBooking(event) {
+            const ktmInput = event.target.elements.namedItem('ktm_file');
+            if (this.form.category === 'mahasiswa' && ktmInput.files.length === 0) {
+                event.preventDefault();
+                this.ktmFileError = 'Silakan pilih file KTM sebelum melanjutkan pembayaran.';
+                this.$nextTick(() => {
+                    document.getElementById('ktm-file-error')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                });
+                return;
+            }
+
+            this.ktmFileError = '';
+            this.isSubmitting = true;
         },
 
         // ── Helper tanggal (waktu lokal, bukan UTC) ─────────────────────

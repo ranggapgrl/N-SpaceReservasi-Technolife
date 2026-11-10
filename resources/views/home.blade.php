@@ -5,18 +5,30 @@
 @section('content')
 
 @php
-    // Satu tempat, beberapa area di dalamnya: area hanya informasi, bukan pilihan harga
-    $areas = collect($roomTypes)->values()->map(function ($room) {
-        $f = $room->facilities ?? [];
-        $list = is_array($f) ? $f : (json_decode($f, true) ?? []);
-        return [
-            'type'        => $room->type,
-            'capacity'    => $room->capacity,
-            'description' => $room->description,
-            'image'       => $room->image,
-            'facilities'  => $list,
-        ];
-    });
+    // Data area statis untuk Open Space (menggantikan $roomTypes dari database yang sudah dihapus)
+    $areas = collect([
+        [
+            'type'        => 'Main Open Space',
+            'capacity'    => 20,
+            'description' => 'Area utama yang luas, nyaman, dan dirancang khusus untuk fokus bekerja secara individu maupun kolaborasi santai.',
+            'image'       => asset('images/background.jpg'),
+            'facilities'  => ['WiFi Cepat', 'Colokan Listrik', 'Kursi Ergonomis', 'AC'],
+        ],
+        [
+            'type'        => 'Quiet Zone',
+            'capacity'    => 8,
+            'description' => 'Zona khusus bagi Anda yang membutuhkan ketenangan ekstra tanpa gangguan suara bising untuk membaca atau skripsian.',
+            'image'       => asset('images/background.jpg'),
+            'facilities'  => ['WiFi Cepat', 'Colokan Listrik', 'Suasana Tenang', 'AC'],
+        ],
+        [
+            'type'        => 'Discussion Corner',
+            'capacity'    => 6,
+            'description' => 'Sudut interaktif yang ideal untuk berdiskusi kelompok kecil, meeting santai, atau kerja kelompok.',
+            'image'       => asset('images/background.jpg'),
+            'facilities'  => ['WiFi Cepat', 'Meja Luas', 'Colokan Listrik', 'AC'],
+        ],
+    ]);
 
     $tarifs = [
         ['key' => 'mahasiswa', 'name' => 'Mahasiswa', 'price' => '35.000'],
@@ -197,7 +209,7 @@
 
         <div class="nss-hero-img reveal-up" style="transition-delay: 150ms;">
             <img src="{{ asset('images/background.jpg') }}" 
-                onerror="this.src=' {{ asset('images/background.png') }}"
+                onerror="this.src='{{ asset('images/background.png') }}"
                 alt="Needs Study Space">
         </div>
     </div>
@@ -232,7 +244,6 @@
                      @touchend.passive="swipe($event.changedTouches[0].clientX)">
                     @foreach($areas as $a)
                     @php
-                        // Menyesuaikan gambar area dengan folder images/area/ (area1.png, area2.png, dst)
                         $areaImageNum = $loop->index + 1;
                         $localAreaImage = asset('images/area/area' . $areaImageNum . '.jpg');
                     @endphp
@@ -249,8 +260,8 @@
                 @if($areas->count() > 1)
                 <div class="nss-tabs-wrap">
                     <div role="tablist" aria-label="Area" class="nss-tabs nss-display"
-                         @keydown.right.prevent="move(1, true)" @keydown.left.prevent="move(-1, true)"
-                         @keydown.down.prevent="move(1, true)" @keydown.up.prevent="move(-1, true)">
+                        @keydown.right.prevent="move(1, true)" @keydown.left.prevent="move(-1, true)"
+                        @keydown.down.prevent="move(1, true)" @keydown.up.prevent="move(-1, true)">
                         @foreach($areas as $a)
                         <button type="button" role="tab" id="home-area-{{ $loop->index }}" class="nss-tab"
                                 :class="{ 'is-active': area === {{ $loop->index }} }"
@@ -290,8 +301,8 @@
 
 {{-- ========== HARGA ========== --}}
 <section id="harga" class="nss-sec nss-sec--paper"
-         x-data="{ seen: false }"
-         x-init="const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) { seen = true; io.disconnect() } }, { threshold: .35 }); io.observe($el)">
+        x-data="{ seen: false }"
+        x-init="const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) { seen = true; io.disconnect() } }, { threshold: .35 }); io.observe($el)">
     <div class="nss-container nss-split">
 
         <div class="nss-split-head reveal-up">
@@ -353,7 +364,7 @@
 </section>
 
 {{-- ========== SNACK & MINUMAN ========== --}}
-@if($products->count() > 0)
+@if(isset($products) && $products->count() > 0)
 <section class="nss-sec nss-sec--paper">
     <div class="nss-container">
         <div class="nss-sec-head reveal-up">
@@ -411,7 +422,7 @@
             </p>
         </div>
 
-        <!-- Accordion List (Tanpa Animasi Transisi) -->
+        <!-- Accordion List -->
         <div class="border-t border-n-border" x-data="{ activeAccordion: null }">
 
             <!-- FAQ Item 1 -->
@@ -419,7 +430,7 @@
                 <button @click="activeAccordion = activeAccordion === 0 ? null : 0" 
                         class="w-full flex items-center justify-between py-5 text-left focus:outline-none">
                     <span class="font-medium text-n-charcoal text-base">
-                        Bagaimana cara melakukan reservasi ruangan di Needs Study Space?
+                        Bagaimana cara melakukan reservasi di Needs Study Space?
                     </span>
                     <span class="text-n-primary ml-4">
                         <svg x-show="activeAccordion !== 0" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
@@ -427,7 +438,7 @@
                     </span>
                 </button>
                 <div x-show="activeAccordion === 0" x-cloak class="pb-5 text-n-gray text-sm leading-relaxed">
-                    Anda cukup masuk ke halaman utama, pilih menu <strong>Booking</strong>, tentukan tipe ruangan yang diinginkan, pilih tanggal serta durasi sewa, lalu ikuti instruksi pengisian data diri hingga proses pembayaran selesai secara mandiri <b>(Self-Service)</b>.
+                    Anda cukup masuk ke halaman utama, pilih menu <strong>Booking</strong>, tentukan kategori pengunjung, pilih tanggal serta durasi sewa, lalu ikuti instruksi pengisian data diri hingga proses pembayaran selesai secara mandiri <b>(Self-Service)</b>.
                 </div>
             </div>
 

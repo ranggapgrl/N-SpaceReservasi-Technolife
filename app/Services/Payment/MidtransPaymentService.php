@@ -4,42 +4,39 @@ namespace App\Services\Payment;
 
 use App\Models\Booking;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Midtrans\Config;
 use Midtrans\Snap;
 use Midtrans\Transaction;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\DB;
 
 class MidtransPaymentService implements PaymentServiceInterface
 {
     public function __construct()
     {
         // Konfigurasi kredensial Midtrans dari .env via config/services.php
-        Config::$serverKey    = config('services.midtrans.server_key');
+        Config::$serverKey = config('services.midtrans.server_key');
         Config::$isProduction = (bool) config('services.midtrans.is_production', false);
-        Config::$isSanitized  = true;
-        Config::$is3ds        = true;
+        Config::$isSanitized = true;
+        Config::$is3ds = true;
+        Config::$curlOptions = [
+            CURLOPT_HTTPHEADER => [],
+            CURLOPT_CONNECTTIMEOUT => 5,
+            CURLOPT_TIMEOUT => 20,
+        ];
 
-        // Di Windows/Laragon lokal, DNS sering tidak bisa resolve domain Midtrans.
-        // CURLOPT_RESOLVE memaksa curl memakai IP langsung tanpa lewat DNS.
-        // Aman untuk sandbox — HAPUS bagian ini saat deploy ke production.
+        // Pin sandbox hosts to a configurable IP when local DNS cannot resolve them.
         if (! config('services.midtrans.is_production')) {
-            Config::$curlOptions = [
-                // WAJIB ada: library midtrans-php membaca key ini saat curlOptions
-                // diisi. Tanpa ini PHP 8 melempar "Undefined array key 10023".
-                CURLOPT_HTTPHEADER     => [],
+            Config::$curlOptions[CURLOPT_SSL_VERIFYPEER] = false;
+            Config::$curlOptions[CURLOPT_SSL_VERIFYHOST] = 0;
 
-                CURLOPT_SSL_VERIFYPEER => false,
-                CURLOPT_SSL_VERIFYHOST => 0,
-
-                // IP Midtrans Sandbox (via Alibaba Cloud WAF).
-                // Kalau koneksi gagal, coba hapus blok CURLOPT_RESOLVE ini:
-                // IP bisa saja sudah berubah.
-                CURLOPT_RESOLVE => [
-                    'app.sandbox.midtrans.com:443:8.215.152.185',
-                    'api.sandbox.midtrans.com:443:8.215.152.185',
-                ],
-            ];
+            $sandboxIp = (string) config('services.midtrans.sandbox_ip');
+            if ($sandboxIp !== '') {
+                Config::$curlOptions[CURLOPT_RESOLVE] = [
+                    'app.sandbox.midtrans.com:443:'.$sandboxIp,
+                    'api.sandbox.midtrans.com:443:'.$sandboxIp,
+                ];
+            }
         }
     }
 
@@ -48,12 +45,12 @@ class MidtransPaymentService implements PaymentServiceInterface
         // Parameter yang dikirim ke Midtrans Snap API
         $params = [
             'transaction_details' => [
-                'order_id'     => $booking->booking_code,
+                'order_id' => $booking->booking_code,
                 'gross_amount' => (int) $booking->total_price,
             ],
             'customer_details' => [
                 'first_name' => $booking->customer_name,
-                'phone'      => $booking->customer_phone,
+                'phone' => $booking->customer_phone,
             ],
             // URL kembali setelah pelanggan selesai bayar di halaman Midtrans
             'callbacks' => [
@@ -64,10 +61,11 @@ class MidtransPaymentService implements PaymentServiceInterface
         try {
             // Kirim request ke Midtrans, dapatkan URL halaman pembayaran Snap
             $snapResponse = Snap::createTransaction($params);
+
             return $snapResponse->redirect_url;
         } catch (\Throwable $e) {
-            Log::error('Midtrans createTransaction gagal: ' . $e->getMessage(), [
-                'order_id'   => $booking->booking_code,
+            Log::error('Midtrans createTransaction gagal: '.$e->getMessage(), [
+                'order_id' => $booking->booking_code,
                 'server_key' => Config::$serverKey ? 'terisi' : 'KOSONG',
             ]);
             throw $e;
