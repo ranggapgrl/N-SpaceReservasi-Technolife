@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\Room;
 use App\Models\Product;
 use App\Models\Booking;
 use App\Models\BookingItem;
@@ -32,27 +31,26 @@ class BookingController extends Controller
     // ═══════════════════════════════════════════════
 public function index()
     {
-        $roomTypes = Room::where('status', 'active')
-            ->get()
-            ->groupBy('type')
-            ->map(fn($rooms) => $rooms->first());
-
+        // Ambil data produk/snack tambahan yang aktif
         $products = Product::where('is_active', true)->get();
 
         // Ambil daftar tanggal yang diblokir oleh admin
         $blockedDates = BlockedDate::pluck('date')->map(fn($d) => $d->format('Y-m-d'))->toArray();
 
-        return view('booking.index', compact('roomTypes', 'products', 'blockedDates'));
+        // Tampilkan halaman booking tanpa mengirimkan data $roomTypes
+        return view('booking.index', compact('products', 'blockedDates'));
     }
 
-    //  checkAvailability() — 
-public function checkAvailability(Request $request)
+        //  checkAvailability() — 
+    public function checkAvailability(Request $request)
     {
-        $request->validate([
-            'room_type' => 'required|string',
-            'date'      => 'required|date|after_or_equal:today',
-            'duration'  => 'required|integer|min:1|max:30',
-        ]);
+            $request->validate([
+                'date'      => 'required|date|after_or_equal:today',
+                'arrival_time' => 'required|date_format:H:i',
+                'departure_time' => 'required|date_format:H:i|after:arrival_time',
+                'duration'  => 'required|integer|min:1|max:30',
+                'visitor_count' => ['required', 'integer', 'min:1', 'max:'.config('booking.open_space_capacity')],
+            ]);
 
         // Cek apakah ada tanggal dalam rentang durasi yang diblokir oleh admin
         $startDate = \Carbon\Carbon::parse($request->date);
@@ -71,23 +69,21 @@ public function checkAvailability(Request $request)
             }
         }
 
-        $availableRoom = $this->bookingService->getAvailableRoom(
-            $request->room_type,
+        if ($this->bookingService->hasCapacity(
             $request->date,
-            '08:00:00',
-            24 * $request->duration
-        );
-
-        if ($availableRoom) {
+            $request->arrival_time.':00',
+            $request->departure_time.':00',
+            (int) $request->duration,
+            (int) $request->visitor_count
+        )) {
             return response()->json([
                 'available' => true,
-                'room_id'   => $availableRoom->id,
             ]);
         }
 
         return response()->json([
             'available' => false,
-            'message'   => 'No rooms available for this date. Try another date.'
+            'message' => 'Kapasitas open space tidak mencukupi pada jadwal yang dipilih.',
         ]);
     }
 
@@ -97,7 +93,7 @@ public function checkAvailability(Request $request)
     /**
      * Alur:
      * 1. Validasi input (termasuk KTM jika mahasiswa)
-     * 2. Cek tanggal diblokir & ketersediaan ruangan
+     * 2. Cek tanggal diblokir dan kapasitas open space
      * 3. Dalam satu transaksi DB: hitung harga, upload KTM, simpan booking,
      *    items, payment, lalu buat transaksi Midtrans
      * 4. Commit hanya jika SEMUA langkah (termasuk Midtrans) berhasil
@@ -107,38 +103,26 @@ public function checkAvailability(Request $request)
     {
         // ── Validasi Input ────────────────────────────────────────────────────
         $request->validate([
-            'room_type'        => 'required|string',
             'visitor_category' => 'required|in:mahasiswa,umum',
             'ktm_file'         => 'required_if:visitor_category,mahasiswa|nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
-            'date'             => 'required|date',
+            'date'             => 'required|date|after_or_equal:today',
             'arrival_time'     => 'required|date_format:H:i',
             'departure_time'   => 'required|date_format:H:i|after:arrival_time',
-            'duration'         => 'required|integer|min:1',
+            'duration'         => 'required|integer|min:1|max:30',
+            'visitor_count'    => ['required', 'integer', 'min:1', 'max:'.config('booking.open_space_capacity')],
             'customer_name'    => 'required|string|max:255',
             'customer_phone'   => 'required|string|max:20',
-            'products'         => 'nullable|array'
+            'products'         => 'nullable|array',
         ]);
 
         $startDate = \Carbon\Carbon::parse($request->date);
-                $duration  = (int) $request->duration;
+        $duration = (int) $request->duration;
 
-                for ($i = 0; $i < $duration; $i++) {
-                    $checkDate = $startDate->copy()->addDays($i)->format('Y-m-d');
-                    if (BlockedDate::where('date', $checkDate)->exists()) {
-                        return back()->with('error', "Tanggal {$checkDate} dalam rentang pilihan Anda telah ditutup oleh admin. Silakan pilih tanggal lain.");
-                    }
-                }
-
-        // ── Cek Ketersediaan Ruangan ─────────────────────────────────────────
-        $availableRoom = $this->bookingService->getAvailableRoom(
-            $request->room_type,
-            $request->date,
-            '08:00:00',
-            24 * $request->duration
-        );
-
-        if (!$availableRoom) {
-            return back()->with('error', 'Sorry, the room is no longer available. Please select another date.');
+        for ($i = 0; $i < $duration; $i++) {
+            $checkDate = $startDate->copy()->addDays($i)->format('Y-m-d');
+            if (BlockedDate::where('date', $checkDate)->exists()) {
+                return back()->withInput()->with('error', "Tanggal {$checkDate} dalam rentang pilihan Anda telah ditutup oleh admin. Silakan pilih tanggal lain.");
+            }
         }
 
         // Path KTM disimpan di luar try supaya bisa dihapus jika terjadi rollback
@@ -147,9 +131,32 @@ public function checkAvailability(Request $request)
         try {
             DB::beginTransaction();
 
+            $this->bookingService->lockCapacityDates($request->date, $duration);
+
+            for ($i = 0; $i < $duration; $i++) {
+                $checkDate = $startDate->copy()->addDays($i)->format('Y-m-d');
+                if (BlockedDate::where('date', $checkDate)->exists()) {
+                    DB::rollBack();
+
+                    return back()->withInput()->with('error', "Tanggal {$checkDate} dalam rentang pilihan Anda telah ditutup oleh admin. Silakan pilih tanggal lain.");
+                }
+            }
+
+            if (! $this->bookingService->hasCapacity(
+                $request->date,
+                $request->arrival_time.':00',
+                $request->departure_time.':00',
+                $duration,
+                (int) $request->visitor_count
+            )) {
+                DB::rollBack();
+
+                return back()->withInput()->with('error', 'Kapasitas open space tidak mencukupi pada jadwal yang dipilih. Kurangi jumlah pengunjung atau pilih jadwal lain.');
+            }
+
             // ── Hitung Harga ──────────────────────────────────────────────────
             $pricePerDay    = $request->visitor_category === 'mahasiswa' ? 35000 : 55000;
-            $roomPriceTotal = $pricePerDay * $request->duration;
+            $dayPassPrice   = $pricePerDay * $request->duration;
             $productTotal   = 0;
 
             // ── Kalkulasi Item Produk Tambahan ────────────────────────────────
@@ -172,7 +179,7 @@ public function checkAvailability(Request $request)
                 }
             }
 
-            $totalPrice  = $roomPriceTotal + $productTotal;
+            $totalPrice  = $dayPassPrice + $productTotal;
             $bookingCode = 'NDY-' . now()->format('Ymd') . '-' . strtoupper(Str::random(4));
 
             // ── Upload KTM ke Storage Privat ──────────────────────────────────
@@ -190,14 +197,14 @@ public function checkAvailability(Request $request)
             // ── Simpan Data Booking ───────────────────────────────────────────
             $booking = Booking::create([
                 'booking_code'     => $bookingCode,
-                'room_id'          => $availableRoom->id,
                 'customer_name'    => $request->customer_name,
                 'customer_phone'   => $request->customer_phone,
                 'booking_date'     => $request->date,
                 'start_time'       => $request->arrival_time . ':00',
                 'end_time'         => $request->departure_time . ':00',
                 'duration'         => $request->duration,
-                'room_price'       => $roomPriceTotal,
+                'visitor_count'    => $request->visitor_count,
+                'day_pass_price'   => $dayPassPrice,
                 'product_total'    => $productTotal,
                 'total_price'      => $totalPrice,
                 'status'           => 'pending',
@@ -240,9 +247,6 @@ public function checkAvailability(Request $request)
             return redirect()->to($paymentUrl);
 
         } catch (\Throwable $e) {
-            // TODO: HAPUS baris dd() ini setelah penyebab error ketemu
-            dd($e->getMessage(), $e->getFile(), $e->getLine());
-
             if (DB::transactionLevel() > 0) {
                 DB::rollBack();
             }
@@ -273,7 +277,7 @@ public function checkAvailability(Request $request)
      */
 public function success($bookingCode, PaymentServiceInterface $paymentService)
     {
-        $booking = Booking::with(['room', 'items.product', 'payment'])
+        $booking = Booking::with(['items.product', 'payment'])
                     ->where('booking_code', $bookingCode)
                     ->orWhere('id', $bookingCode)
                     ->firstOrFail();
@@ -329,7 +333,7 @@ public function success($bookingCode, PaymentServiceInterface $paymentService)
         $keyword = $request->input('keyword');
 
         if ($keyword) {
-            $bookings = Booking::with('room')
+            $bookings = Booking::query()
                         ->where('booking_code', 'LIKE', "%{$keyword}%")
                         ->orWhere('customer_phone', 'LIKE', "%{$keyword}%")
                         ->orderBy('created_at', 'desc')
@@ -343,7 +347,7 @@ public function success($bookingCode, PaymentServiceInterface $paymentService)
             Cookie::queue('nss_booking_history', json_encode($cookieHistory), 3);
 
         } elseif (!empty($cookieHistory)) {
-            $bookings = Booking::with('room')
+            $bookings = Booking::query()
                         ->whereIn('booking_code', $cookieHistory)
                         ->orderBy('created_at', 'desc')
                         ->get();

@@ -2,50 +2,75 @@
 
 namespace App\Services;
 
-use App\Models\Room;
 use App\Models\Booking;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class BookingService
 {
     /**
-     * Get available room of a specific type for the given date, time, and duration
+     * Lock all calendar days in a booking so concurrent requests cannot oversell seats.
      */
-    public function getAvailableRoom(string $roomType, string $date, string $startTime, int $duration)
+    public function lockCapacityDates(string $date, int $duration): void
     {
-        $start = Carbon::parse("$date $startTime");
-        $end = $start->copy()->addHours($duration);
+        $dates = collect(range(0, $duration - 1))
+            ->map(fn (int $offset): string => Carbon::parse($date)->addDays($offset)->toDateString());
 
-        // Find rooms of this type that are active
-        $rooms = Room::where('type', $roomType)
-            ->where('status', 'active')
-            ->get();
+        DB::table('booking_capacity_locks')->insertOrIgnore(
+            $dates->map(fn (string $bookingDate): array => ['booking_date' => $bookingDate])->all()
+        );
 
-        foreach ($rooms as $room) {
-            if ($this->isRoomAvailable($room->id, $date, $start->format('H:i:s'), $end->format('H:i:s'))) {
-                return $room; // Return the first available physical room
-            }
-        }
-
-        return null; // No rooms of this type available
+        DB::table('booking_capacity_locks')
+            ->whereIn('booking_date', $dates)
+            ->orderBy('booking_date')
+            ->lockForUpdate()
+            ->get(['booking_date']);
     }
 
     /**
-     * Check if a specific room is available for the given time slot
+     * Determine whether a booking fits within the shared open-space capacity.
      */
-    public function isRoomAvailable($roomId, $date, $startTime, $endTime)
-    {
-        $overlappingBookings = Booking::where('room_id', $roomId)
-            ->where('booking_date', $date)
-            ->whereIn('status', ['pending', 'confirmed']) // ignore cancelled/expired/completed (if completed frees it up)
-            ->where(function ($query) use ($startTime, $endTime) {
-                $query->where(function ($q) use ($startTime, $endTime) {
-                    // new booking starts inside an existing booking
-                    $q->where('start_time', '<', $endTime)
-                      ->where('end_time', '>', $startTime);
-                });
-            })->count();
+    public function hasCapacity(
+        string $date,
+        string $startTime,
+        string $endTime,
+        int $duration,
+        int $visitorCount
+    ): bool {
+        $capacity = (int) config('booking.open_space_capacity');
+        if ($visitorCount > $capacity) {
+            return false;
+        }
 
-        return $overlappingBookings === 0;
+        $startDate = Carbon::parse($date);
+        $endDate = $startDate->copy()->addDays($duration - 1);
+        $existingBookings = Booking::query()
+            ->whereBetween('booking_date', [$startDate->copy()->subDays(29)->toDateString(), $endDate->toDateString()])
+            ->whereIn('status', ['pending', 'confirmed'])
+            ->get(['booking_date', 'start_time', 'end_time', 'duration', 'visitor_count']);
+
+        for ($offset = 0; $offset < $duration; $offset++) {
+            $currentDate = $startDate->copy()->addDays($offset);
+            $occupiedVisitors = 0;
+
+            foreach ($existingBookings as $booking) {
+                $bookingStart = Carbon::parse($booking->booking_date);
+                $bookingEnd = $bookingStart->copy()->addDays(max(0, (int) $booking->duration - 1));
+
+                if ($currentDate->lt($bookingStart) || $currentDate->gt($bookingEnd)) {
+                    continue;
+                }
+
+                if ($booking->start_time < $endTime && $booking->end_time > $startTime) {
+                    $occupiedVisitors += (int) $booking->visitor_count;
+                }
+            }
+
+            if ($occupiedVisitors + $visitorCount > $capacity) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

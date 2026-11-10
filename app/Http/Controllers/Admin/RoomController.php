@@ -46,7 +46,7 @@ class RoomController extends Controller
         Room::create($validated);
 
         return redirect()->route('admin.rooms.index')
-                         ->with('success', 'Ruangan berhasil ditambahkan.');
+                        ->with('success', 'Ruangan berhasil ditambahkan.');
     }
 
     public function edit(Room $room)
@@ -81,7 +81,7 @@ class RoomController extends Controller
         $room->update($validated);
 
         return redirect()->route('admin.rooms.index')
-                         ->with('success', 'Ruangan berhasil diperbarui.');
+                        ->with('success', 'Ruangan berhasil diperbarui.');
     }
 
     public function destroy(Room $room)
@@ -89,6 +89,6 @@ class RoomController extends Controller
         $room->delete();
 
         return redirect()->route('admin.rooms.index')
-                         ->with('success', 'Ruangan berhasil dihapus.');
+                        ->with('success', 'Ruangan berhasil dihapus.');
     }
 }

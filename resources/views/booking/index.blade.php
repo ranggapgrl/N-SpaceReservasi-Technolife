@@ -286,7 +286,8 @@
                             <div x-show="step === 1"
                                 x-transition:enter="nss-enter" x-transition:enter-start="nss-enter-from" x-transition:enter-end="nss-enter-to">
 
-                                <input type="hidden" name="room_type" value="{{ optional($roomTypes->first())->type }}">
+                                <!-- Diubah menjadi statis open-space -->
+                                <input type="hidden" name="room_type" value="open-space">
 
                                 <fieldset style="border:0;margin:0;padding:0;min-width:0">
                                     <legend class="nss-radio">Pilih tarif</legend>
@@ -310,7 +311,6 @@
                                     </div>
                                 </fieldset>
 
-                                @if($roomTypes->isNotEmpty())
                                 <section aria-labelledby="areas-title">
                                     <h2 id="areas-title" class="nss-display nss-areas-head">Area di dalam Needs Study Space</h2>
 
@@ -334,31 +334,13 @@
                                         </div>
                                     </div>
 
-                                    @if($roomTypes->count() > 1)
-                                    <div class="nss-tabs-wrap">
-                                        <div role="tablist" aria-label="Area" class="nss-tabs"
-                                            @keydown.right.prevent="moveArea(1, true)" @keydown.left.prevent="moveArea(-1, true)">
-                                            @foreach($roomTypes as $room)
-                                            <button type="button" role="tab" id="area-tab-{{ $loop->index }}" class="nss-tab"
-                                                    :class="{ 'is-active': area === {{ $loop->index }} }"
-                                                    :aria-selected="area === {{ $loop->index }}"
-                                                    :tabindex="area === {{ $loop->index }} ? 0 : -1"
-                                                    @click="area = {{ $loop->index }}">{{ $room->type }}</button>
-                                            @endforeach
-                                        </div>
-                                    </div>
-                                    @endif
-
                                     <div class="nss-stack" aria-live="polite">
-                                        @foreach($roomTypes as $room)
-                                        <div :class="{ 'is-active': area === {{ $loop->index }} }" :aria-hidden="area !== {{ $loop->index }}">
-                                            <p class="nss-small nss-muted">Maks. {{ $room->capacity }} orang</p>
-                                            <p style="margin-top:.25rem;max-width:40rem;color:#4b5a66">{{ $room->description ?? 'Ruang kerja tenang dan nyaman.' }}</p>
+                                        <div class="is-active" aria-hidden="false">
+                                            <p class="nss-small nss-muted">Kapasitas Open Space: {{ config('booking.open_space_capacity', 50) }} orang</p>
+                                            <p style="margin-top:.25rem;max-width:40rem;color:#4b5a66">Ruang kerja bersama (open space) yang tenang, luas, dan fleksibel untuk kebutuhan belajarmu.</p>
                                         </div>
-                                        @endforeach
                                     </div>
                                 </section>
-                                @endif
                             </div>
 
                             <!-- ============ LANGKAH 2: TANGGAL & DURASI ============ -->
@@ -684,7 +666,7 @@ function bookingWizard() {
         galTimer: null,   // timer slideshow galeri foto
         galCount: 12,     // total foto galeri
         touchX: 0,
-        areaCount: {{ $roomTypes->count() }},
+        areaCount: 1, // Disesuaikan menjadi 1 untuk open space statis
         labels: ['Tarif', 'Tanggal', 'Tambahan', 'Pemesan'],
         timeOptions: TIME_OPTIONS,
         arrivalTimes: TIME_OPTIONS.slice(0, -1),
