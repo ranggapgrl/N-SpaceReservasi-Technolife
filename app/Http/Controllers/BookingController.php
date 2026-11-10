@@ -271,12 +271,45 @@ public function checkAvailability(Request $request)
     /**
      * Halaman ini hanya menampilkan status booking; konfirmasi lunas dilakukan lewat notifikasi Midtrans.
      */
-    public function success($bookingCode)
+public function success($bookingCode, PaymentServiceInterface $paymentService)
     {
         $booking = Booking::with(['room', 'items.product', 'payment'])
                     ->where('booking_code', $bookingCode)
                     ->orWhere('id', $bookingCode)
                     ->firstOrFail();
+
+        // Jika pembayaran masih pending, coba sinkronkan statusnya langsung dari Midtrans
+        if ($booking->payment && $booking->payment->status === 'pending') {
+            try {
+                // Memanggil status transaksi dari API Midtrans berdasarkan booking_code (order_id)
+                $statusResponse = \Midtrans\Transaction::status($booking->booking_code);
+                
+                if (isset($statusResponse->transaction_status)) {
+                    $status = $statusResponse->transaction_status;
+                    $isPaid = $status === 'settlement' || ($status === 'capture' && ($statusResponse->fraud_status ?? null) === 'accept');
+
+                    if ($isPaid) {
+                        DB::transaction(function () use ($booking, $statusResponse) {
+                            $paidAt = $statusResponse->settlement_time ?? $statusResponse->capture_time ?? now();
+                            $booking->payment->update([
+                                'status' => 'paid',
+                                'payment_method' => $statusResponse->payment_type ?? 'midtrans',
+                                'transaction_id' => $statusResponse->transaction_id ?? null,
+                                'paid_at' => \Carbon\Carbon::parse($paidAt),
+                                'verified_at' => now(),
+                            ]);
+                            $booking->update(['status' => 'confirmed']);
+                        });
+                        
+                        // Refresh relasi payment setelah di-update
+                        $booking->load('payment');
+                    }
+                }
+            } catch (\Throwable $e) {
+                // Abaikan error jika transaksi belum terdaftar di API Midtrans / simulasi lokal
+                Log::info('Gagal sinkronisasi status otomatis di halaman success: ' . $e->getMessage());
+            }
+        }
 
         return view('booking.success', compact('booking'));
     }

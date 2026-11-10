@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use App\Models\Booking;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage; // Untuk membaca file KTM privat
 
 class BookingController extends Controller
@@ -47,8 +47,8 @@ class BookingController extends Controller
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->where('booking_code', 'LIKE', "%{$search}%")
-                ->orWhere('customer_name', 'LIKE', "%{$search}%")
-                ->orWhere('customer_phone', 'LIKE', "%{$search}%");
+                    ->orWhere('customer_name', 'LIKE', "%{$search}%")
+                    ->orWhere('customer_phone', 'LIKE', "%{$search}%");
             });
         }
 
@@ -58,8 +58,8 @@ class BookingController extends Controller
         // Hitung jumlah KTM yang menunggu verifikasi (untuk badge notifikasi)
         // Digunakan untuk menampilkan badge di tab/menu admin
         $pendingKtmCount = Booking::where('visitor_category', 'mahasiswa')
-                                ->where('ktm_status', 'pending')
-                                ->count();
+            ->where('ktm_status', 'pending')
+            ->count();
 
         return view('admin.bookings.index', compact('bookings', 'status', 'search', 'ktmFilter', 'pendingKtmCount'));
     }
@@ -74,6 +74,7 @@ class BookingController extends Controller
     {
         // Load semua relasi yang diperlukan sekaligus (eager loading)
         $booking->load(['room', 'items.product', 'payment']);
+
         return view('admin.bookings.show', compact('booking'));
     }
 
@@ -87,11 +88,11 @@ class BookingController extends Controller
     public function updateStatus(Request $request, Booking $booking)
     {
         $request->validate([
-            'status' => 'required|in:pending,confirmed,cancelled,completed'
+            'status' => 'required|in:pending,confirmed,cancelled,completed',
         ]);
 
         $booking->update([
-            'status' => $request->status
+            'status' => $request->status,
         ]);
 
         return back()->with('success', 'Status booking berhasil diperbarui.');
@@ -119,20 +120,20 @@ class BookingController extends Controller
     public function viewKtm(Booking $booking)
     {
         // Pastikan booking ini adalah mahasiswa dan punya KTM
-        if (!$booking->ktm_path || !Storage::disk('local')->exists($booking->ktm_path)) {
+        if (! $booking->ktm_path || ! Storage::disk('local')->exists($booking->ktm_path)) {
             abort(404, 'File KTM tidak ditemukan.');
         }
 
         // Ambil konten file dari storage privat
         $file = Storage::disk('local')->get($booking->ktm_path);
-        
+
         // Tentukan MIME type berdasarkan ekstensi file
         $extension = pathinfo($booking->ktm_path, PATHINFO_EXTENSION);
         $mimeTypes = [
-            'jpg'  => 'image/jpeg',
+            'jpg' => 'image/jpeg',
             'jpeg' => 'image/jpeg',
-            'png'  => 'image/png',
-            'pdf'  => 'application/pdf',
+            'png' => 'image/png',
+            'pdf' => 'application/pdf',
         ];
         $mimeType = $mimeTypes[strtolower($extension)] ?? 'application/octet-stream';
 
@@ -140,7 +141,7 @@ class BookingController extends Controller
         // 'inline' = tampilkan di browser, bukan download
         return response($file, 200)
             ->header('Content-Type', $mimeType)
-            ->header('Content-Disposition', 'inline; filename="KTM-' . $booking->booking_code . '.' . $extension . '"');
+            ->header('Content-Disposition', 'inline; filename="KTM-'.$booking->booking_code.'.'.$extension.'"');
     }
 
     // ═══════════════════════════════════════════════
@@ -150,18 +151,18 @@ class BookingController extends Controller
      * Admin menyetujui KTM yang diunggah mahasiswa.
      * Status KTM diubah dari 'pending' menjadi 'approved'.
      *
-     * @param  Booking $booking — booking yang KTM-nya akan disetujui
+     * @param  Booking  $booking  — booking yang KTM-nya akan disetujui
      */
     public function approveKtm(Booking $booking)
     {
         // Pastikan booking ini memang mahasiswa dan ada KTM-nya
-        if ($booking->visitor_category !== 'mahasiswa' || !$booking->ktm_path) {
+        if ($booking->visitor_category !== 'mahasiswa' || ! $booking->ktm_path) {
             return back()->with('error', 'Booking ini tidak memerlukan verifikasi KTM.');
         }
 
         // Update status KTM menjadi approved
         $booking->update([
-            'ktm_status'        => 'approved',
+            'ktm_status' => 'approved',
             'ktm_reject_reason' => null, // Hapus alasan penolakan jika sebelumnya ditolak
         ]);
 
@@ -175,8 +176,8 @@ class BookingController extends Controller
      * Admin menolak KTM yang diunggah mahasiswa.
      * Penolakan WAJIB disertai alasan agar mahasiswa tahu apa yang harus diperbaiki.
      *
-     * @param  Request $request — mengandung field 'reject_reason'
-     * @param  Booking $booking — booking yang KTM-nya akan ditolak
+     * @param  Request  $request  — mengandung field 'reject_reason'
+     * @param  Booking  $booking  — booking yang KTM-nya akan ditolak
      */
     public function rejectKtm(Request $request, Booking $booking)
     {
@@ -185,12 +186,12 @@ class BookingController extends Controller
             'reject_reason' => 'required|string|min:10|max:500',
         ], [
             'reject_reason.required' => 'Alasan penolakan wajib diisi.',
-            'reject_reason.min'      => 'Alasan penolakan minimal 10 karakter.',
+            'reject_reason.min' => 'Alasan penolakan minimal 10 karakter.',
         ]);
 
         // Update status KTM dan simpan alasan penolakan
         $booking->update([
-            'ktm_status'        => 'rejected',
+            'ktm_status' => 'rejected',
             'ktm_reject_reason' => $request->reject_reason,
         ]);
 
@@ -212,6 +213,9 @@ class BookingController extends Controller
         }
 
         $booking->delete();
-        return back()->with('success', 'Data booking berhasil dihapus.');
+
+        // Halaman detail sudah tidak tersedia setelah booking dihapus.
+        return redirect()->route('admin.bookings.index')
+            ->with('success', 'Data booking berhasil dihapus.');
     }
 }
