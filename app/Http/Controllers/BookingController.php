@@ -240,7 +240,7 @@ class BookingController extends Controller
             // dan menahan slot ruangan.
             $paymentUrl = $paymentService->createTransaction($booking);
 
-            // ── Simpan Kode Booking ke Cookie Browser (30 hari) ───────────────
+            // ── Simpan Kode Booking ke Cookie Browser (sesuai dengan settingan) ───────────────
             $history = json_decode($request->cookie('nss_booking_history', '[]'), true);
             if (! is_array($history)) {
                 $history = [];

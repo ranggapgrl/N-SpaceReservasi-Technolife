@@ -321,7 +321,7 @@
                     <div class="space-y-3 text-sm">
                         <div class="flex justify-between gap-4">
                             <span class="text-n-gray">Biaya Day Pass ({{ $booking->visitor_category_label }})</span>
-                            <span class="tabular-nums">Rp{{ number_format($booking->room_price ?? 0, 0, ',', '.') }}</span>
+                            <span class="tabular-nums">Rp{{ number_format($booking->day_pass_price ?? 0, 0, ',', '.') }}</span>
                         </div>
                         @if($booking->product_total > 0)
                         <div class="flex justify-between gap-4">

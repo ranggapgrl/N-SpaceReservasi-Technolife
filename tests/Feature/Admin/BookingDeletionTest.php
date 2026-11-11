@@ -36,4 +36,31 @@ class BookingDeletionTest extends TestCase
         $this->assertDatabaseMissing('bookings', ['id' => $booking->id]);
         $this->get(route('admin.bookings.show', $booking))->assertNotFound();
     }
+
+    public function test_admin_booking_pages_render_without_a_room_relationship(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        $booking = Booking::create([
+            'booking_code' => 'OPEN-SPACE-BOOKING',
+            'customer_name' => 'Open Space User',
+            'customer_phone' => '08123456789',
+            'booking_date' => '2026-11-12',
+            'start_time' => '08:00:00',
+            'end_time' => '22:00:00',
+            'duration' => 1,
+            'day_pass_price' => 35000,
+            'product_total' => 0,
+            'total_price' => 35000,
+            'status' => 'pending',
+        ]);
+
+        $this->get(route('admin.bookings.index'))
+            ->assertOk()
+            ->assertSee($booking->booking_code);
+
+        $this->get(route('admin.bookings.show', $booking))
+            ->assertOk()
+            ->assertSee('Rp35.000');
+    }
 }
