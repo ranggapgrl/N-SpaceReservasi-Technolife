@@ -122,6 +122,7 @@ class BookingController extends Controller
             'customer_name' => 'required|string|max:255',
             'customer_phone' => 'required|string|max:20',
             'products' => 'nullable|array',
+            'customer_email' => 'required|email:rfc|max:255',
         ]);
 
         $startDate = Carbon::parse($request->date);
@@ -220,6 +221,7 @@ class BookingController extends Controller
                 'visitor_category' => $request->visitor_category,
                 'ktm_path' => $ktmPath,
                 'ktm_status' => $ktmStatus,
+                'customer_email' => $request->customer_email,
             ]);
 
             // ── Simpan Item Produk ─────────────────────────────────────────────

@@ -511,6 +511,13 @@
                                         class="nss-field" placeholder="08xxxxxxxxxx">
                                     <p class="nss-note">Gunakan nomor WhatsApp yang aktif.</p>
                                 </div>
+                                <div>
+                                    <label for="customer_email" class="nss-label">Email</label>
+                                    <input type="email" id="customer_email" name="customer_email"
+                                        x-model="form.customer_email" required
+                                        autocomplete="email" class="nss-field"
+                                        placeholder="nama@email.com">
+                                </div>
 
                                 {{-- ═══ UPLOAD KTM (KHUSUS MAHASISWA) ═══ --}}
                                 <div x-show="form.category === 'mahasiswa'" x-cloak
@@ -691,6 +698,7 @@ function bookingWizard() {
             duration: oldDuration >= 1 && oldDuration <= 30 ? oldDuration : 1,
             customer_name: @json(old('customer_name', '')),
             customer_phone: @json(old('customer_phone', '')),
+            customer_email: @json(old('customer_email', '')),
             products: {}
         },
 

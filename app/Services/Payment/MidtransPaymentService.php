@@ -50,6 +50,7 @@ class MidtransPaymentService implements PaymentServiceInterface
             ],
             'customer_details' => [
                 'first_name' => $booking->customer_name,
+                'email' => $booking->customer_email,
                 'phone' => $booking->customer_phone,
             ],
             // URL kembali setelah pelanggan selesai bayar di halaman Midtrans

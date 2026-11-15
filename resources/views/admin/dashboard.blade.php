@@ -225,6 +225,9 @@
                             <tr class="transition-colors hover:bg-gray-50/80">
                                 <td class="px-5 py-4">
                                     <p class="font-semibold text-[#1b1c1c]">{{ $booking->customer_name }}</p>
+                                    @if($booking->customer_email)
+                                        <p class="mt-0.5 break-all text-xs text-gray-500">{{ $booking->customer_email }}</p>
+                                    @endif
                                     <p class="mt-0.5 text-xs text-gray-500">{{ ucfirst($booking->visitor_category) }}</p>
                                 </td>
                                 <td class="px-5 py-4">

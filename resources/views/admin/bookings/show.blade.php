@@ -88,6 +88,16 @@
                                 <dt class="text-xs text-n-gray">No. Telepon</dt>
                                 <dd class="mt-0.5 font-medium text-n-charcoal">{{ $booking->customer_phone }}</dd>
                             </div>
+                            <div class="py-3">
+                                <dt class="text-xs text-n-gray">Email</dt>
+                                <dd class="mt-0.5 break-all font-medium text-n-charcoal">
+                                    @if($booking->customer_email)
+                                        <a href="mailto:{{ $booking->customer_email }}" class="hover:text-n-primary hover:underline">{{ $booking->customer_email }}</a>
+                                    @else
+                                        —
+                                    @endif
+                                </dd>
+                            </div>
                             <div class="py-3 pb-0">
                                 <dt class="text-xs text-n-gray">Kategori pengunjung</dt>
                                 <dd class="mt-0.5 font-medium text-n-charcoal">{{ $booking->visitor_category_label }}</dd>
