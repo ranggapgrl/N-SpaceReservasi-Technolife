@@ -1,6 +1,6 @@
 FROM php:8.2-apache
 
-# Install dependencies yang dibutuhkan Laravel
+# Install dependencies sistem
 RUN apt-get update && apt-get install -y \
     libpng-dev \
     libjpeg-dev \
@@ -9,16 +9,18 @@ RUN apt-get update && apt-get install -y \
     unzip \
     git \
     curl \
-    libsqlite3-dev
+    libsqlite3-dev \
+    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs
 
 # Install PHP extensions
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install pdo pdo_mysql pdo_sqlite gd
 
-# Aktifkan mod_rewrite Apache untuk URL Laravel
+# Aktifkan mod_rewrite Apache untuk Laravel
 RUN a2enmod rewrite
 
-# Salin konfigurasi VirtualHost Apache untuk mengarah ke folder public/
+# Konfigurasi Document Root Apache ke folder public/
 ENV APACHE_DOCUMENT_ROOT /var/www/html/public
 RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf
 RUN sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf
@@ -29,13 +31,16 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Set working directory
 WORKDIR /var/www/html
 
-# Salin semua file project ke dalam container
+# Salin seluruh file project
 COPY . .
 
-# Install dependencies via composer
+# Install dependencies PHP (Production)
 RUN composer install --no-dev --optimize-autoloader
 
-# Beri hak akses (permissions) untuk storage dan bootstrap/cache
+# Install dependencies Node.js dan Build Asset (Vite/Tailwind) secara otomatis di server
+RUN npm install && npm run build
+
+# Beri hak akses (permissions) untuk storage dan cache
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
 EXPOSE 80
