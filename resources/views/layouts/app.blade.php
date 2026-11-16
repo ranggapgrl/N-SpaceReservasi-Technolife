@@ -136,6 +136,11 @@
         .nf-link:hover { color: #fff; }
         .nf-contact address { margin: 0; font-style: normal; display: grid; gap: .75rem; }
         .nf-slogan { margin: .875rem 0 0; max-width: 18rem; font-size: .875rem; font-weight: 300; line-height: 1.6; color: rgba(255,255,255,.7); }
+        .nf-socials { display: flex; flex-wrap: wrap; gap: .75rem 1rem; margin-top: 1.25rem; }
+        .nf-social-link { display: inline-flex; min-height: 2.75rem; align-items: center; gap: .5rem; color: rgba(255,255,255,.7); font-size: .875rem; }
+        .nf-social-link:hover { color: #fff; }
+        .nf-social-link:focus-visible { outline: 2px solid #fff; outline-offset: 4px; border-radius: 2px; }
+        .nf-social-link svg { width: 1.25rem; height: 1.25rem; flex: none; }
 
         /* Logo berlatar terang -> ditaruh di kotak putih. .nf-crop memangkas ruang
            kosong di sekeliling gambar; rasio wrapper = rasio isi logo. */
@@ -256,6 +261,23 @@
                         <span class="nf-text">Jl. Ir. Soekarno No.4, RW.6, Cibeusi, Kec. Jatinangor, Kabupaten Sumedang, Jawa Barat 45363</span>
                         <a href="mailto:hello@technolife.co.id" class="nf-link" style="word-break: break-all;">hello@technolife.co.id</a>
                     </address>
+                    <nav class="nf-socials" aria-label="Media sosial Needs Study Space">
+                        <a href="https://www.instagram.com/needsstudyspace/" target="_blank" rel="noopener noreferrer" class="nf-social-link">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <rect x="3" y="3" width="18" height="18" rx="5"/>
+                                <circle cx="12" cy="12" r="4"/>
+                                <circle cx="17.5" cy="6.5" r=".75" fill="currentColor" stroke="none"/>
+                            </svg>
+                            <span>Instagram</span>
+                        </a>
+                        <a href="https://www.tiktok.com/@needsstudyspace" target="_blank" rel="noopener noreferrer" class="nf-social-link">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M14 4v10.5a4.5 4.5 0 1 1-4-4.47"/>
+                                <path d="M14 4c.5 3 2.5 5 5.5 5.5"/>
+                            </svg>
+                            <span>TikTok</span>
+                        </a>
+                    </nav>
                 </div>
 
                 {{-- Induk perusahaan --}}
@@ -272,13 +294,6 @@
                     </span>
                 </a>
 
-            </div>
-
-            <div class="nf-bottom">
-                <span>&copy; {{ date('Y') }} Needs Study Space &bull; PT Techno Life Indonesia. All rights reserved.</span>
-                @if (Route::has('login'))
-                    <a href="{{ route('login') }}">Admin Portal</a>
-                @endif
             </div>
         </div>
     </footer>
