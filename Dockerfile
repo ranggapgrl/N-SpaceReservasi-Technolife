@@ -17,8 +17,10 @@ RUN apt-get update && apt-get install -y \
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install pdo pdo_mysql pdo_sqlite gd
 
-# Aktifkan mod_rewrite Apache untuk Laravel
-RUN a2enmod rewrite
+# Aktifkan mod_rewrite Apache dan atasi konflik MPM Apache
+RUN a2enmod rewrite \
+    && a2dismod mpm_event mpm_worker \
+    && a2enmod mpm_prefork
 
 # Konfigurasi Document Root Apache ke folder public/
 ENV APACHE_DOCUMENT_ROOT /var/www/html/public
