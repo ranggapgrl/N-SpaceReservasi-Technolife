@@ -9,6 +9,12 @@
     $paymentStatus = $booking->payment?->status;
     $isPaymentPaid = $paymentStatus === 'paid' && $booking->payment?->verified_at !== null;
     $isSimulatedPayment = $paymentStatus === 'simulated';
+    $canPay = $booking->status === 'pending' && in_array($paymentStatus, ['pending', 'failed'], true);
+    $paymentExpiresAt = $booking->payment?->expires_at;
+    $showPaymentCountdown = $paymentStatus === 'pending' && $paymentExpiresAt !== null;
+    $paymentRemainingSeconds = $showPaymentCountdown
+        ? max(0, $paymentExpiresAt->getTimestamp() - now()->getTimestamp())
+        : 0;
     $bookingIdCode = $booking->booking_code ?? ('#NDY-' . date('Ymd', strtotime($booking->created_at)) . sprintf('%02d', $booking->id));
     $customerName = $booking->customer_name ?? '-';
     $customerPhone = $booking->customer_phone ?? '-';
@@ -92,6 +98,8 @@
                                     Struk Pemesanan &amp; Pembayaran Lunas
                                 @elseif($isSimulatedPayment)
                                     Simulasi Pembayaran — Bukan Transaksi Nyata
+                                @elseif($paymentStatus === 'failed')
+                                    Pembayaran Gagal atau Kedaluwarsa
                                 @else
                                     Booking Tercatat — Menunggu Konfirmasi Pembayaran
                                 @endif
@@ -101,6 +109,10 @@
                                     Pembayaran lunas telah dikonfirmasi oleh Midtrans.
                                 @elseif($isSimulatedPayment)
                                     Data ini hanya untuk pengujian dan tidak dihitung sebagai pendapatan.
+                                @elseif($paymentStatus === 'failed')
+                                    Transaksi sebelumnya tidak berhasil. Anda dapat mencoba kembali ; link baru berlaku 30 menit.
+                                @elseif($canPay)
+                                    Selesaikan pembayaran 30 menit sejak link pembayaran dibuat.
                                 @else
                                     Pembayaran belum memiliki konfirmasi server yang valid.
                                 @endif
@@ -173,6 +185,8 @@
                                 <p class="mt-1 text-xs font-medium text-emerald-700">Lunas · dikonfirmasi Midtrans</p>
                             @elseif($isSimulatedPayment)
                                 <p class="mt-1 text-xs font-medium text-amber-800">Transaksi simulasi</p>
+                            @elseif($paymentStatus === 'failed')
+                                <p class="mt-1 text-xs font-medium text-red-700">Pembayaran gagal atau kedaluwarsa</p>
                             @else
                                 <p class="mt-1 text-xs font-medium text-amber-800">Menunggu konfirmasi pembayaran</p>
                             @endif
@@ -198,10 +212,51 @@
                         Pembayaran Anda sudah terverifikasi. Simpan atau cetak invoice ini untuk catatan saat kunjungan.
                     @elseif($isSimulatedPayment)
                         Ini adalah pembayaran simulasi, bukan transaksi nyata. Gunakan invoice ini hanya untuk keperluan pengujian.
+                    @elseif($paymentStatus === 'failed')
+                        Pembayaran sebelumnya gagal atau kedaluwarsa. Gunakan tombol di bawah untuk membuat pembayaran baru, berlaku 30 menit sejak dibuat.
+                    @elseif($canPay)
+                        Pembayaran menunggu konfirmasi. Link berlaku selama 30 menit; Anda dapat membuka kembali pembayaran dari halaman ini atau riwayat booking.
                     @else
                         Invoice ini mencatat booking Anda, tetapi belum menjadi bukti pembayaran lunas. Perbarui status setelah pembayaran diproses.
                     @endif
                 </p>
+                @if($showPaymentCountdown)
+                    @php
+                        $deadlineWib = $paymentExpiresAt->copy()->timezone('Asia/Jakarta');
+                        $hoursRemaining = intdiv($paymentRemainingSeconds, 3600);
+                        $minutesRemaining = intdiv($paymentRemainingSeconds % 3600, 60);
+                        $secondsRemaining = $paymentRemainingSeconds % 60;
+                    @endphp
+                    <div class="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
+                        <p class="text-xs font-semibold uppercase tracking-wider text-amber-900">Sisa waktu pembayaran</p>
+                        <time
+                            id="payment-countdown"
+                            class="mt-1 block font-mono text-2xl font-bold tabular-nums text-amber-900"
+                            datetime="{{ $deadlineWib->toIso8601String() }}"
+                            data-payment-countdown
+                            data-remaining-seconds="{{ $paymentRemainingSeconds }}"
+                            role="timer"
+                            aria-live="off"
+                        >{{ sprintf('%02d:%02d:%02d', $hoursRemaining, $minutesRemaining, $secondsRemaining) }}</time>
+                        <p class="mt-1 text-xs text-amber-800">
+                            Batas pembayaran: {{ $deadlineWib->format('d M Y, H:i:s') }} WIB
+                        </p>
+                        <p id="payment-expired-message" class="mt-2 hidden text-sm font-medium text-red-700" role="status">
+                            Waktu link ini habis. Tekan tombol pembayaran untuk mengecek status dan mencoba lagi jika transaksi sudah kedaluwarsa.
+                        </p>
+                    </div>
+                @endif
+                @if($canPay)
+                    <form action="{{ route('checkout.pay', $booking->booking_code) }}" method="POST" class="mt-4">
+                        @csrf
+                        <button type="submit" class="flex min-h-12 w-full items-center justify-center rounded-xl bg-n-primary px-4 py-3 text-center text-sm font-semibold text-white hover:bg-n-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--n-primary)]">
+                            {{ $paymentStatus === 'failed' ? 'Bayar Lagi lewat Midtrans' : 'Lanjutkan Pembayaran' }}
+                        </button>
+                    </form>
+                @endif
+                @if(session('error'))
+                    <p class="mt-3 text-sm text-red-700" role="alert">{{ session('error') }}</p>
+                @endif
                 @unless($isPaymentPaid || $isSimulatedPayment)
                     <a href="{{ route('booking.success', $booking->booking_code) }}"
                        class="mt-3 inline-flex min-h-10 items-center text-sm font-semibold text-n-primary underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--n-primary)]">
@@ -273,4 +328,47 @@
         </aside>
     </div>
 </div>
+@if($showPaymentCountdown)
+    <script>
+        (() => {
+            const countdown = document.querySelector('[data-payment-countdown]');
+            const expiredMessage = document.getElementById('payment-expired-message');
+
+            if (!countdown || !expiredMessage) {
+                return;
+            }
+
+            let remainingSeconds = Number(countdown.dataset.remainingSeconds);
+
+            const renderCountdown = () => {
+                const hours = Math.floor(remainingSeconds / 3600);
+                const minutes = Math.floor((remainingSeconds % 3600) / 60);
+                const seconds = remainingSeconds % 60;
+
+                countdown.textContent = [hours, minutes, seconds]
+                    .map((part) => String(part).padStart(2, '0'))
+                    .join(':');
+
+                if (remainingSeconds <= 0) {
+                    countdown.classList.add('text-red-700');
+                    expiredMessage.classList.remove('hidden');
+
+                    return false;
+                }
+
+                return true;
+            };
+
+            if (renderCountdown()) {
+                const interval = window.setInterval(() => {
+                    remainingSeconds -= 1;
+
+                    if (!renderCountdown()) {
+                        window.clearInterval(interval);
+                    }
+                }, 1000);
+            }
+        })();
+    </script>
+@endif
 @endsection

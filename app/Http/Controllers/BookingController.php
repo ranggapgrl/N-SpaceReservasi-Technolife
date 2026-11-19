@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\BlockedDate;
 use App\Models\Booking;
-use App\Models\Payment;
 use App\Models\Product;
 use App\Services\BookingService; // Untuk cek tanggal yang diblokir admin
 use App\Services\Payment\PaymentServiceInterface;
@@ -230,11 +229,12 @@ class BookingController extends Controller
             }
 
             // ── Buat Record Payment (status awal: pending) ─────────────────────
-            Payment::create([
+            $payment = $booking->payment()->create([
                 'booking_id' => $booking->id,
                 'amount' => $totalPrice,
                 'status' => 'pending',
             ]);
+            $booking->setRelation('payment', $payment);
 
             // ── Buat Transaksi Pembayaran (Midtrans / fallback) ───────────────
             // Dipanggil SEBELUM commit: jika Midtrans gagal, seluruh booking
@@ -250,7 +250,7 @@ class BookingController extends Controller
             if (! in_array($booking->booking_code, $history)) {
                 $history[] = $booking->booking_code;
             }
-            Cookie::queue('nss_booking_history', json_encode($history), 3);
+            Cookie::queue('nss_booking_history', json_encode($history), 30);
 
             // Semua langkah berhasil
             DB::commit();
@@ -297,7 +297,9 @@ class BookingController extends Controller
         if ($booking->payment && $booking->payment->status === 'pending') {
             try {
                 // Memanggil status transaksi dari API Midtrans berdasarkan booking_code (order_id)
-                $statusResponse = Transaction::status($booking->booking_code);
+                $statusResponse = Transaction::status(
+                    $booking->payment->midtrans_order_id ?? $booking->booking_code
+                );
 
                 if (isset($statusResponse->transaction_status)) {
                     $status = $statusResponse->transaction_status;
@@ -344,7 +346,7 @@ class BookingController extends Controller
         $keyword = $request->input('keyword');
 
         if ($keyword) {
-            $bookings = Booking::query()
+            $bookings = Booking::with('payment')
                 ->where('booking_code', 'LIKE', "%{$keyword}%")
                 ->orWhere('customer_phone', 'LIKE', "%{$keyword}%")
                 ->orderBy('created_at', 'desc')
@@ -358,7 +360,7 @@ class BookingController extends Controller
             Cookie::queue('nss_booking_history', json_encode($cookieHistory), 3);
 
         } elseif (! empty($cookieHistory)) {
-            $bookings = Booking::query()
+            $bookings = Booking::with('payment')
                 ->whereIn('booking_code', $cookieHistory)
                 ->orderBy('created_at', 'desc')
                 ->get();

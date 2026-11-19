@@ -97,10 +97,13 @@
                                 <a href="{{ route('booking.success', $booking->id) }}" class="flex-1 sm:flex-none text-center bg-n-charcoal hover:bg-black text-white px-6 py-3 rounded-xl text-sm font-medium transition-colors shadow-sm">
                                     Lihat Tiket
                                 </a>
-                                @if($booking->status === 'pending')
-                                    <a href="{{ route('checkout.simulate', $booking->booking_code) }}" class="flex-1 sm:flex-none text-center bg-amber-500 hover:bg-amber-600 text-white px-6 py-3 rounded-xl text-sm font-medium transition-colors shadow-sm">
-                                        Bayar Sekarang
-                                    </a>
+                                @if($booking->status === 'pending' && in_array($booking->payment?->status, ['pending', 'failed'], true))
+                                    <form action="{{ route('checkout.pay', $booking->booking_code) }}" method="POST" class="flex-1 sm:flex-none">
+                                        @csrf
+                                        <button type="submit" class="w-full text-center bg-n-primary hover:bg-n-primary/90 text-white px-6 py-3 rounded-xl text-sm font-medium transition-colors shadow-sm">
+                                            {{ $booking->payment->status === 'failed' ? 'Bayar Lagi' : 'Bayar' }}
+                                        </button>
+                                    </form>
                                 @endif
                             </div>
                         </div>

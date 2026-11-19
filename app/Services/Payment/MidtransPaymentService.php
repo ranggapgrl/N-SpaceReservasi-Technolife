@@ -6,6 +6,7 @@ use App\Models\Booking;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Midtrans\Config;
 use Midtrans\Snap;
 use Midtrans\Transaction;
@@ -42,10 +43,27 @@ class MidtransPaymentService implements PaymentServiceInterface
 
     public function createTransaction(Booking $booking): string
     {
-        // Parameter yang dikirim ke Midtrans Snap API
+        $payment = $booking->payment;
+
+        if (! $payment) {
+            throw new \LogicException('Booking tidak memiliki data pembayaran.');
+        }
+
+        $startedAt = now();
+        $expiresAt = $startedAt->copy()->addMinutes(30);
+        $orderId = $booking->booking_code.'-'.Str::upper(Str::random(8));
+
+        $payment->update([
+            'status' => 'pending',
+            'transaction_id' => null,
+            'midtrans_order_id' => $orderId,
+            'payment_url' => null,
+            'expires_at' => $expiresAt,
+        ]);
+
         $params = [
             'transaction_details' => [
-                'order_id' => $booking->booking_code,
+                'order_id' => $orderId,
                 'gross_amount' => (int) $booking->total_price,
             ],
             'customer_details' => [
@@ -57,16 +75,23 @@ class MidtransPaymentService implements PaymentServiceInterface
             'callbacks' => [
                 'finish' => route('booking.success', $booking->booking_code),
             ],
+            'expiry' => [
+                'start_time' => $startedAt->copy()->timezone('Asia/Jakarta')->format('Y-m-d H:i:s O'),
+                'unit' => 'minute',
+                'duration' => 30,
+            ],
         ];
 
         try {
-            // Kirim request ke Midtrans, dapatkan URL halaman pembayaran Snap
             $snapResponse = Snap::createTransaction($params);
+            $paymentUrl = $snapResponse->redirect_url;
 
-            return $snapResponse->redirect_url;
+            $payment->update(['payment_url' => $paymentUrl]);
+
+            return $paymentUrl;
         } catch (\Throwable $e) {
             Log::error('Midtrans createTransaction gagal: '.$e->getMessage(), [
-                'order_id' => $booking->booking_code,
+                'order_id' => $orderId,
                 'server_key' => Config::$serverKey ? 'terisi' : 'KOSONG',
             ]);
             throw $e;
@@ -119,10 +144,20 @@ class MidtransPaymentService implements PaymentServiceInterface
         }
 
         $booking = Booking::with('payment')
-            ->where('booking_code', $transaction->order_id)
+            ->where(function ($query) use ($transaction): void {
+                $query->where('booking_code', $transaction->order_id)
+                    ->orWhereHas('payment', function ($paymentQuery) use ($transaction): void {
+                        $paymentQuery->where('midtrans_order_id', $transaction->order_id);
+                    });
+            })
             ->first();
 
-        if (! $booking?->payment || ! $this->amountsMatch($booking->payment->amount, $transaction->gross_amount)) {
+        if (
+            ! $booking?->payment
+            || ($booking->payment->midtrans_order_id !== null
+                && $booking->payment->midtrans_order_id !== (string) $transaction->order_id)
+            || ! $this->amountsMatch($booking->payment->amount, $transaction->gross_amount)
+        ) {
             return false;
         }
 

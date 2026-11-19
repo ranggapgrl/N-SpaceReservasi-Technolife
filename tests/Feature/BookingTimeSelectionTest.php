@@ -34,6 +34,7 @@ class BookingTimeSelectionTest extends TestCase
     {
         $paymentService = Mockery::mock(PaymentServiceInterface::class);
         $paymentService->shouldReceive('createTransaction')
+            ->withArgs(fn (Booking $booking): bool => $booking->payment !== null && $booking->payment->exists)
             ->once()
             ->andReturn('/checkout/test');
         $this->app->instance(PaymentServiceInterface::class, $paymentService);
@@ -47,6 +48,7 @@ class BookingTimeSelectionTest extends TestCase
             'duration' => 1,
             'customer_name' => 'Test Customer',
             'customer_phone' => '08123456789',
+            'customer_email' => 'customer@example.com',
         ]);
 
         $response->assertRedirect('/checkout/test');

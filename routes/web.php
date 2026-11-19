@@ -61,6 +61,9 @@ Route::get('/checkout/simulate-payment/{bookingCode}', [CheckoutController::clas
 // Proses pembayaran simulasi
 Route::post('/checkout/process-payment/{bookingCode}', [CheckoutController::class, 'processPayment'])->name('checkout.process');
 
+// Lanjutkan pembayaran yang masih aktif atau buat transaksi baru untuk pembayaran gagal.
+Route::post('/checkout/pay/{bookingCode}', [CheckoutController::class, 'pay'])->name('checkout.pay');
+
 // Midtrans memanggil endpoint ini dari servernya, bukan dari form browser.
 Route::post('/midtrans/notification', MidtransNotificationController::class)->name('midtrans.notification');
 
@@ -80,10 +83,10 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
 
     // Dashboard utama admin
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
-    
+
     // ── Manajemen Ruangan ──────────────────────────────────────────────────
     Route::resource('rooms', RoomController::class);
-    
+
     // ── Manajemen Booking ──────────────────────────────────────────────────
     // Route::resource menghasilkan: index, create, store, show, edit, update, destroy
     Route::resource('bookings', AdminBookingController::class);

@@ -9,6 +9,13 @@ class Payment extends Model
 {
     protected $guarded = [];
 
+    protected function casts(): array
+    {
+        return [
+            'expires_at' => 'datetime',
+        ];
+    }
+
     public function scopeVerifiedPaid(Builder $query): Builder
     {
         return $query->where('status', 'paid')
