@@ -50,7 +50,7 @@ class MidtransPaymentService implements PaymentServiceInterface
         }
 
         $startedAt = now();
-        $expiresAt = $startedAt->copy()->addMinutes(30);
+        $expiresAt = $startedAt->copy()->addMinutes(30); // untuk mengatur waktu pembayaran lanjutan
         $orderId = $booking->booking_code.'-'.Str::upper(Str::random(8));
 
         $payment->update([
