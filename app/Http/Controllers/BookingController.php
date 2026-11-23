@@ -5,7 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\BlockedDate;
 use App\Models\Booking;
 use App\Models\Product;
-use App\Services\BookingService; // Untuk cek tanggal yang diblokir admin
+use App\Models\Room;
+use App\Services\BookingService;
 use App\Services\Payment\PaymentServiceInterface;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -14,6 +15,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Midtrans\Transaction;
 
 class BookingController extends Controller
@@ -33,25 +35,34 @@ class BookingController extends Controller
     {
         // Ambil data produk/snack tambahan yang aktif
         $products = Product::where('is_active', true)->get();
+        $rooms = Room::where('status', 'active')->orderBy('name')->get();
+        $venuePackages = config('booking.venue_packages');
+        $venueServiceChargePercent = config('booking.venue_service_charge_percent');
 
         // Ambil daftar tanggal yang diblokir oleh admin
         $blockedDates = BlockedDate::pluck('date')->map(fn ($d) => $d->format('Y-m-d'))->toArray();
 
         // Tampilkan halaman booking tanpa mengirimkan data $roomTypes
-        return view('booking.index', compact('products', 'blockedDates'));
+        return view('booking.index', compact('products', 'rooms', 'blockedDates', 'venuePackages', 'venueServiceChargePercent'));
     }
 
     //  checkAvailability() —
     public function checkAvailability(Request $request)
     {
         $validated = $request->validate([
+            'room_id' => ['nullable', 'integer', 'exists:rooms,id'],
+            'venue_package' => ['required_with:room_id', 'nullable', 'in:per_jam,halfday,fullday'],
             'dates' => ['required_without:date', 'array', 'min:1', 'max:30'],
             'dates.*' => ['required', 'date_format:Y-m-d', 'after_or_equal:today', 'distinct'],
             'date' => ['required_without:dates', 'nullable', 'date_format:Y-m-d', 'after_or_equal:today'],
-            'arrival_time' => 'required|date_format:H:i',
-            'departure_time' => 'required|date_format:H:i|after:arrival_time',
+            'arrival_times' => ['required_without:arrival_time', 'array'],
+            'arrival_times.*' => ['required', 'date_format:H:i'],
+            'departure_times' => ['required_without_all:departure_time,room_id', 'array'],
+            'departure_times.*' => ['required_without:room_id', 'date_format:H:i'],
+            'arrival_time' => ['required_without:arrival_times', 'date_format:H:i'],
+            'departure_time' => ['required_without_all:departure_times,room_id', 'date_format:H:i'],
             'duration' => ['required_without:dates', 'integer', 'min:1', 'max:30'],
-            'visitor_count' => ['required', 'integer', 'min:1', 'max:'.config('booking.open_space_capacity')],
+            'visitor_count' => ['required', 'integer', 'min:1'],
         ]);
 
         $dates = $this->resolveBookingDates($validated);
@@ -66,12 +77,43 @@ class BookingController extends Controller
             ]);
         }
 
-        if ($this->bookingService->hasCapacity(
-            $dates,
-            $request->arrival_time.':00',
-            $request->departure_time.':00',
-            (int) $request->visitor_count
-        )) {
+        $room = ! empty($validated['room_id'])
+            ? Room::where('status', 'active')->find($validated['room_id'])
+            : null;
+
+        if (! empty($validated['room_id']) && ! $room) {
+            return response()->json([
+                'available' => false,
+                'message' => 'Venue ini sedang tidak tersedia untuk pemesanan.',
+            ]);
+        }
+
+        $venuePackage = $room ? config('booking.venue_packages.'.$validated['venue_package']) : null;
+        $schedules = $this->resolveBookingSchedules(
+            $validated,
+            $venuePackage ? (int) $venuePackage['duration_hours'] : null
+        );
+
+        if ($room && (int) $request->visitor_count < $room->minimumAttendees()) {
+            return response()->json([
+                'available' => false,
+                'message' => "Minimum pemesanan untuk {$room->type} adalah {$room->minimumAttendees()} orang.",
+            ]);
+        }
+
+        $capacity = $room?->capacity ?? (int) config('booking.open_space_capacity');
+        if ((int) $request->visitor_count > $capacity) {
+            return response()->json([
+                'available' => false,
+                'message' => "Kapasitas tempat yang dipilih maksimal {$capacity} orang.",
+            ]);
+        }
+
+        $hasCapacity = $room
+            ? $this->bookingService->roomIsAvailable($room->id, $schedules)
+            : $this->bookingService->hasCapacity($schedules, (int) $request->visitor_count);
+
+        if ($hasCapacity) {
             return response()->json([
                 'available' => true,
             ]);
@@ -79,7 +121,9 @@ class BookingController extends Controller
 
         return response()->json([
             'available' => false,
-            'message' => 'Kapasitas open space tidak mencukupi pada jadwal yang dipilih.',
+            'message' => $room
+                ? 'Venue sudah dipesan pada salah satu jadwal pilihan.'
+                : 'Kapasitas open space tidak mencukupi pada jadwal yang dipilih.',
         ]);
     }
 
@@ -88,16 +132,23 @@ class BookingController extends Controller
     {
         // ── Validasi Input ────────────────────────────────────────────────────
         $validated = $request->validate([
-            'visitor_category' => 'required|in:mahasiswa,umum',
+            'room_id' => ['nullable', 'integer', 'exists:rooms,id'],
+            'venue_package' => ['required_with:room_id', 'nullable', 'in:per_jam,halfday,fullday'],
+            'visitor_category' => ['required_without:room_id', 'nullable', 'in:mahasiswa,umum'],
             'ktm_file' => 'required_if:visitor_category,mahasiswa|nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
             'dates' => ['required_without:date', 'array', 'min:1', 'max:30'],
             'dates.*' => ['required', 'date_format:Y-m-d', 'after_or_equal:today', 'distinct'],
             'date' => ['required_without:dates', 'nullable', 'date_format:Y-m-d', 'after_or_equal:today'],
-            'arrival_time' => 'required|date_format:H:i',
-            'departure_time' => 'required|date_format:H:i|after:arrival_time',
+            'arrival_times' => ['required_without:arrival_time', 'array'],
+            'arrival_times.*' => ['required', 'date_format:H:i'],
+            'departure_times' => ['required_without_all:departure_time,room_id', 'array'],
+            'departure_times.*' => ['required_without:room_id', 'date_format:H:i'],
+            'arrival_time' => ['required_without:arrival_times', 'date_format:H:i'],
+            'departure_time' => ['required_without_all:departure_times,room_id', 'date_format:H:i'],
             'duration' => ['required_without:dates', 'integer', 'min:1', 'max:30'],
-            'visitor_count' => ['required', 'integer', 'min:1', 'max:'.config('booking.open_space_capacity')],
+            'visitor_count' => ['required', 'integer', 'min:1'],
             'customer_name' => 'required|string|max:255',
+            'institution' => ['required_with:room_id', 'nullable', 'string', 'max:255'],
             'customer_phone' => 'required|string|max:20',
             'products' => 'nullable|array',
             'customer_email' => 'required|email:rfc|max:255',
@@ -107,6 +158,33 @@ class BookingController extends Controller
         $dates = $this->resolveBookingDates($validated);
         $firstDate = $dates[0];
         $duration = count($dates);
+        $room = ! empty($validated['room_id'])
+            ? Room::where('status', 'active')->find($validated['room_id'])
+            : null;
+
+        if (! empty($validated['room_id']) && ! $room) {
+            return back()->withInput()->with('error', 'Venue ini sedang tidak tersedia untuk pemesanan.');
+        }
+
+        $venuePackage = $room ? config('booking.venue_packages.'.$validated['venue_package']) : null;
+        $schedules = $this->resolveBookingSchedules(
+            $validated,
+            $venuePackage ? (int) $venuePackage['duration_hours'] : null
+        );
+
+        $capacity = $room?->capacity ?? (int) config('booking.open_space_capacity');
+        if ((int) $validated['visitor_count'] > $capacity) {
+            throw ValidationException::withMessages([
+                'visitor_count' => "Kapasitas tempat yang dipilih maksimal {$capacity} orang.",
+            ]);
+        }
+
+        if ($room && (int) $validated['visitor_count'] < $room->minimumAttendees()) {
+            throw ValidationException::withMessages([
+                'visitor_count' => "Minimum pemesanan untuk {$room->type} adalah {$room->minimumAttendees()} orang.",
+            ]);
+        }
+
         $blocked = $this->findBlockedDate($dates);
 
         if ($blocked) {
@@ -129,20 +207,30 @@ class BookingController extends Controller
                 return back()->withInput()->with('error', "Tanggal {$blocked->date->format('Y-m-d')} ditutup oleh admin. Silakan pilih tanggal lain.");
             }
 
-            if (! $this->bookingService->hasCapacity(
-                $dates,
-                $request->arrival_time.':00',
-                $request->departure_time.':00',
-                (int) $request->visitor_count
-            )) {
+            $hasCapacity = $room
+                ? $this->bookingService->roomIsAvailable($room->id, $schedules)
+                : $this->bookingService->hasCapacity($schedules, (int) $request->visitor_count);
+
+            if (! $hasCapacity) {
                 DB::rollBack();
 
-                return back()->withInput()->with('error', 'Kapasitas open space tidak mencukupi pada jadwal yang dipilih. Kurangi jumlah pengunjung atau pilih jadwal lain.');
+                $message = $room
+                    ? 'Venue sudah dipesan pada salah satu jadwal pilihan. Silakan pilih jam atau tanggal lain.'
+                    : 'Kapasitas open space tidak mencukupi pada jadwal yang dipilih. Kurangi jumlah pengunjung atau pilih jadwal lain.';
+
+                return back()->withInput()->with('error', $message);
             }
 
             // ── Hitung Harga ──────────────────────────────────────────────────
-            $pricePerDay = $request->visitor_category === 'mahasiswa' ? 35000 : 55000;
-            $dayPassPrice = $pricePerDay * $duration * (int) $validated['visitor_count'];
+            $visitorCategory = $room ? 'venue' : $validated['visitor_category'];
+            $venuePricePerPerson = $room ? (int) $venuePackage['price_per_person'] : null;
+            $dayPassPrice = $room
+                ? $venuePricePerPerson * (int) $validated['visitor_count'] * $duration
+                : ($visitorCategory === 'mahasiswa' ? 35000 : 55000) * (int) $validated['visitor_count'] * $duration;
+            $serviceChargeRate = $room ? (float) config('booking.venue_service_charge_percent') : 0;
+            $serviceCharge = $room
+                ? (int) round($dayPassPrice * $serviceChargeRate / 100)
+                : 0;
             $productTotal = 0;
 
             // ── Kalkulasi Item Produk Tambahan ────────────────────────────────
@@ -165,7 +253,7 @@ class BookingController extends Controller
                 }
             }
 
-            $totalPrice = $dayPassPrice + $productTotal;
+            $totalPrice = $dayPassPrice + $serviceCharge + $productTotal;
             $bookingCode = 'NDY-'.now()->format('Ymd').'-'.strtoupper(Str::random(4));
 
             // ── Upload KTM ke Storage Privat ──────────────────────────────────
@@ -183,11 +271,19 @@ class BookingController extends Controller
             // ── Simpan Data Booking ───────────────────────────────────────────
             $booking = Booking::create([
                 'booking_code' => $bookingCode,
+                'room_id' => $room?->id,
+                'room_name' => $room?->name,
+                'venue_package' => $room ? $validated['venue_package'] : null,
+                'venue_duration_hours' => $venuePackage['duration_hours'] ?? null,
+                'venue_price_per_person' => $venuePricePerPerson,
+                'service_charge_rate' => $serviceChargeRate,
+                'service_charge' => $serviceCharge,
                 'customer_name' => $request->customer_name,
+                'institution' => $room ? $validated['institution'] : null,
                 'customer_phone' => $request->customer_phone,
                 'booking_date' => $firstDate,
-                'start_time' => $request->arrival_time.':00',
-                'end_time' => $request->departure_time.':00',
+                'start_time' => $schedules[$firstDate]['start_time'],
+                'end_time' => $schedules[$firstDate]['end_time'],
                 'duration' => $duration,
                 'visitor_count' => $request->visitor_count,
                 'facility_notes' => $request->input('facility_notes'),
@@ -195,7 +291,7 @@ class BookingController extends Controller
                 'product_total' => $productTotal,
                 'total_price' => $totalPrice,
                 'status' => 'pending',
-                'visitor_category' => $request->visitor_category,
+                'visitor_category' => $visitorCategory,
                 'ktm_path' => $ktmPath,
                 'ktm_status' => $ktmStatus,
                 'customer_email' => $request->customer_email,
@@ -203,7 +299,7 @@ class BookingController extends Controller
 
             // Simpan tanggal pilihan satu per satu, bukan sebagai rentang berurutan.
             $booking->bookingDates()->createMany(
-                array_map(fn (string $date): array => ['date' => $date], $dates)
+                array_map(fn (array $schedule): array => $schedule, array_values($schedules))
             );
 
             // ── Simpan Item Produk ─────────────────────────────────────────────
@@ -271,7 +367,7 @@ class BookingController extends Controller
      */
     public function success($bookingCode, PaymentServiceInterface $paymentService)
     {
-        $booking = Booking::with(['items.product', 'payment', 'bookingDates'])
+        $booking = Booking::with(['items.product', 'payment', 'bookingDates', 'room'])
             ->where('booking_code', $bookingCode)
             ->orWhere('id', $bookingCode)
             ->firstOrFail();
@@ -335,6 +431,47 @@ class BookingController extends Controller
             ->all();
     }
 
+    /**
+     * Resolve a time range for each date, while accepting the previous shared-time form payload.
+     */
+    private function resolveBookingSchedules(array $validated, ?int $venueDurationHours = null): array
+    {
+        $schedules = [];
+
+        foreach ($this->resolveBookingDates($validated) as $date) {
+            $startTime = $validated['arrival_times'][$date] ?? $validated['arrival_time'] ?? null;
+            $endTime = $venueDurationHours !== null && $startTime
+                ? Carbon::createFromFormat('!H:i', $startTime)->addHours($venueDurationHours)->format('H:i')
+                : ($validated['departure_times'][$date] ?? $validated['departure_time'] ?? null);
+
+            if (! $startTime || ! $endTime || $endTime <= $startTime) {
+                $errorKey = $venueDurationHours !== null
+                    ? (isset($validated['arrival_times']) ? 'arrival_times.'.$date : 'arrival_time')
+                    : (isset($validated['arrival_times']) ? 'departure_times.'.$date : 'departure_time');
+
+                throw ValidationException::withMessages([
+                    $errorKey => $venueDurationHours !== null
+                        ? 'Jam mulai tidak sesuai dengan durasi paket venue.'
+                        : 'Pilih jam mulai dan jam selesai yang valid untuk setiap tanggal.',
+                ]);
+            }
+
+            if ($venueDurationHours !== null && $endTime > '22:00') {
+                throw ValidationException::withMessages([
+                    (isset($validated['arrival_times']) ? 'arrival_times.'.$date : 'arrival_time') => 'Jadwal paket harus selesai paling lambat pukul 22.00.',
+                ]);
+            }
+
+            $schedules[$date] = [
+                'date' => $date,
+                'start_time' => $startTime.':00',
+                'end_time' => $endTime.':00',
+            ];
+        }
+
+        return $schedules;
+    }
+
     private function findBlockedDate(array $dates): ?BlockedDate
     {
         return BlockedDate::where(function ($query) use ($dates): void {
@@ -359,7 +496,7 @@ class BookingController extends Controller
         $keyword = $request->input('keyword');
 
         if ($keyword) {
-            $bookings = Booking::with(['payment', 'bookingDates'])
+            $bookings = Booking::with(['payment', 'bookingDates', 'room'])
                 ->where('booking_code', 'LIKE', "%{$keyword}%")
                 ->orWhere('customer_phone', 'LIKE', "%{$keyword}%")
                 ->orderBy('created_at', 'desc')
@@ -373,7 +510,7 @@ class BookingController extends Controller
             Cookie::queue('nss_booking_history', json_encode($cookieHistory), 3);
 
         } elseif (! empty($cookieHistory)) {
-            $bookings = Booking::with(['payment', 'bookingDates'])
+            $bookings = Booking::with(['payment', 'bookingDates', 'room'])
                 ->whereIn('booking_code', $cookieHistory)
                 ->orderBy('created_at', 'desc')
                 ->get();

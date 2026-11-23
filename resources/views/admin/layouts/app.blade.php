@@ -63,6 +63,17 @@
                     Bookings
                 </a>
 
+                <!-- Venue dan ruangan -->
+                <a href="{{ route('admin.rooms.index') }}"
+                   class="flex items-center px-4 py-3 rounded-xl font-medium transition-colors
+                          {{ request()->routeIs('admin.rooms.*') ? 'text-white shadow-xs' : 'text-gray-600 hover:bg-gray-50 hover:text-[#1b1c1c]' }}"
+                   style="{{ request()->routeIs('admin.rooms.*') ? 'background-color: #b1002c;' : '' }}">
+                    <svg class="w-5 h-5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 21h18M5 21V7l8-4v18m6 0V11l-6-4M9 9v.01M9 12v.01M9 15v.01M9 18v.01m8-5v.01m0 3v.01"/>
+                    </svg>
+                    Venue
+                </a>
+
                 <!-- Produk -->
                 <a href="{{ route('admin.products.index') }}"
                    class="flex items-center px-4 py-3 rounded-xl font-medium transition-colors

@@ -152,15 +152,20 @@
                             </td>
                             {{-- Kategori pengunjung --}}
                             <td class="px-4 py-4">
-                                {{ $booking->visitor_category === 'mahasiswa' ? 'Mahasiswa' : 'Umum' }}
+                                {{ $booking->room_name ?? $booking->room?->name ?? ($booking->visitor_category === 'mahasiswa' ? 'Study Space · Mahasiswa' : ($booking->visitor_category === 'venue' ? 'Venue' : 'Study Space · Umum')) }}
                             </td>
                             <td class="px-4 py-4">
                                 @forelse($booking->bookingDates as $bookingDate)
-                                    <p>{{ $bookingDate->date->format('d M Y') }}</p>
+                                    <p>
+                                        {{ $bookingDate->date->format('d M Y') }}
+                                        @if($bookingDate->start_time || $bookingDate->end_time || $booking->start_time)
+                                            <span class="text-xs text-n-gray">{{ \Carbon\Carbon::parse($bookingDate->start_time ?? $booking->start_time)->format('H:i') }}–{{ \Carbon\Carbon::parse($bookingDate->end_time ?? $booking->end_time)->format('H:i') }}</span>
+                                        @endif
+                                    </p>
                                 @empty
                                     <p>{{ \Carbon\Carbon::parse($booking->booking_date)->format('d M Y') }}</p>
                                 @endforelse
-                                <p class="text-xs text-n-gray">{{ $booking->bookingDates->isNotEmpty() ? $booking->bookingDates->count() : $booking->duration }} hari</p>
+                                <p class="text-xs text-n-gray">{{ $booking->bookingDates->isNotEmpty() ? $booking->bookingDates->count() : $booking->duration }} {{ $booking->room_id ? 'sesi' : 'hari' }}</p>
                             </td>
                             <td class="px-4 py-4 text-right font-medium tabular-nums">Rp{{ number_format($booking->total_price, 0, ',', '.') }}</td>
                             <td class="px-4 py-4">

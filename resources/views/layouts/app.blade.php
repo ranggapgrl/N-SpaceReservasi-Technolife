@@ -230,7 +230,8 @@
         @yield('content')
     </main>
 
-    {{-- Footer --}}
+    @unless(request()->is('booking'))
+    {{-- Footer tidak ditampilkan pada wizard booking yang menggunakan layar penuh. --}}
     <footer class="nf">
         <div class="nf-inner">
             <div class="nf-grid">
@@ -297,6 +298,7 @@
             </div>
         </div>
     </footer>
+    @endunless
 
     <script>
         /* Penanda menu aktif: di beranda, "Area" menyala saat bagian #spaces sedang terlihat. */

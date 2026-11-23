@@ -74,13 +74,24 @@
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                             <div>
                                 <span class="text-xs text-n-gray block mb-1 font-light">Jenis Akses</span>
-                                <span class="font-semibold text-n-charcoal text-base">Study Space Area (All-Access)</span>
+                                <span class="font-semibold text-n-charcoal text-base">
+                                    {{ $booking->room_name || $booking->room ? 'Sewa Venue' : 'Study Space Area (All-Access)' }}
+                                </span>
                             </div>
                             <div>
                                 <span class="text-xs text-n-gray block mb-1 font-light">Jadwal Kedatangan</span>
                                 <span class="font-medium text-n-charcoal">
+                                    @if($booking->room_name || $booking->room)
+                                        {{ $booking->room_name ?? $booking->room->name }} ·
+                                    @else
+                                        Study Space ·
+                                    @endif
                                     @forelse($booking->bookingDates as $bookingDate)
-                                        {{ $bookingDate->date->format('d M Y') }}@unless($loop->last), @endunless
+                                        {{ $bookingDate->date->format('d M Y') }}
+                                        @if($bookingDate->start_time || $bookingDate->end_time || $booking->start_time)
+                                            ({{ \Carbon\Carbon::parse($bookingDate->start_time ?? $booking->start_time)->format('H:i') }}–{{ \Carbon\Carbon::parse($bookingDate->end_time ?? $booking->end_time)->format('H:i') }})
+                                        @endif
+                                        @unless($loop->last), @endunless
                                     @empty
                                         {{ \Carbon\Carbon::parse($booking->booking_date)->format('d M Y') }}
                                     @endforelse

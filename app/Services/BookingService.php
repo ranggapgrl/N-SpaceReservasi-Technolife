@@ -34,9 +34,7 @@ class BookingService
      * Determine whether a booking fits within the shared open-space capacity.
      */
     public function hasCapacity(
-        array $dates,
-        string $startTime,
-        string $endTime,
+        array $schedules,
         int $visitorCount
     ): bool {
         $capacity = (int) config('booking.open_space_capacity');
@@ -45,24 +43,21 @@ class BookingService
             return false;
         }
 
-        $dates = collect($dates)
-            ->map(fn (string $date): string => Carbon::parse($date)->toDateString())
-            ->unique()
-            ->sort()
-            ->values();
+        $schedules = collect($schedules)->keyBy('date');
 
-        if ($dates->isEmpty()) {
+        if ($schedules->isEmpty()) {
             return false;
         }
 
-        $firstDate = Carbon::parse($dates->first());
-        $lastDate = Carbon::parse($dates->last());
+        $firstDate = Carbon::parse($schedules->keys()->sort()->first());
+        $lastDate = Carbon::parse($schedules->keys()->sort()->last());
         $existingBookings = Booking::query()
             ->whereIn('status', ['pending', 'confirmed'])
-            ->where(function ($query) use ($dates, $firstDate, $lastDate): void {
-                $query->whereHas('bookingDates', function ($dateQuery) use ($dates): void {
-                    $dateQuery->where(function ($selectedDatesQuery) use ($dates): void {
-                        foreach ($dates as $date) {
+            ->whereNull('room_id')
+            ->where(function ($query) use ($schedules, $firstDate, $lastDate): void {
+                $query->whereHas('bookingDates', function ($dateQuery) use ($schedules): void {
+                    $dateQuery->where(function ($selectedDatesQuery) use ($schedules): void {
+                        foreach ($schedules->keys() as $date) {
                             $selectedDatesQuery->orWhereDate('date', $date);
                         }
                     });
@@ -77,32 +72,83 @@ class BookingService
             ->with('bookingDates')
             ->get(['id', 'booking_date', 'start_time', 'end_time', 'duration', 'visitor_count']);
 
-        foreach ($dates as $date) {
+        foreach ($schedules as $date => $schedule) {
             $occupiedVisitors = 0;
 
             foreach ($existingBookings as $booking) {
                 if ($booking->bookingDates->isNotEmpty()) {
-                    $includesDate = $booking->bookingDates->contains(
+                    $bookingDate = $booking->bookingDates->first(
                         fn ($bookingDate): bool => $bookingDate->date->toDateString() === $date
                     );
+                    $includesDate = $bookingDate !== null;
                 } else {
                     $bookingStart = Carbon::parse($booking->booking_date);
                     $bookingEnd = $bookingStart->copy()->addDays(max(0, (int) $booking->duration - 1));
                     $currentDate = Carbon::parse($date);
                     $includesDate = $currentDate->gte($bookingStart) && $currentDate->lte($bookingEnd);
+                    $bookingDate = null;
                 }
 
                 if (! $includesDate) {
                     continue;
                 }
 
-                if ($booking->start_time < $endTime && $booking->end_time > $startTime) {
+                $existingStartTime = $bookingDate?->start_time ?? $booking->start_time;
+                $existingEndTime = $bookingDate?->end_time ?? $booking->end_time;
+
+                if ($existingStartTime < $schedule['end_time'] && $existingEndTime > $schedule['start_time']) {
                     $occupiedVisitors += (int) $booking->visitor_count;
                 }
             }
 
             if ($occupiedVisitors + $visitorCount > $capacity) {
                 return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Private venues are exclusive: any overlapping booking blocks that room for that interval.
+     */
+    public function roomIsAvailable(int $roomId, array $schedules): bool
+    {
+        $schedules = collect($schedules)->keyBy('date');
+
+        if ($schedules->isEmpty()) {
+            return false;
+        }
+
+        $bookings = Booking::query()
+            ->where('room_id', $roomId)
+            ->whereIn('status', ['pending', 'confirmed'])
+            ->whereHas('bookingDates', function ($dateQuery) use ($schedules): void {
+                $dateQuery->where(function ($selectedDatesQuery) use ($schedules): void {
+                    foreach ($schedules->keys() as $date) {
+                        $selectedDatesQuery->orWhereDate('date', $date);
+                    }
+                });
+            })
+            ->with('bookingDates')
+            ->get(['id', 'room_id', 'start_time', 'end_time']);
+
+        foreach ($schedules as $date => $schedule) {
+            foreach ($bookings as $booking) {
+                $existingDate = $booking->bookingDates->first(
+                    fn ($bookingDate): bool => $bookingDate->date->toDateString() === $date
+                );
+
+                if (! $existingDate) {
+                    continue;
+                }
+
+                $existingStartTime = $existingDate->start_time ?? $booking->start_time;
+                $existingEndTime = $existingDate->end_time ?? $booking->end_time;
+
+                if ($existingStartTime < $schedule['end_time'] && $existingEndTime > $schedule['start_time']) {
+                    return false;
+                }
             }
         }
 

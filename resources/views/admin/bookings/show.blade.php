@@ -84,6 +84,12 @@
                                 <dt class="text-xs text-n-gray">Nama</dt>
                                 <dd class="mt-0.5 font-semibold text-n-charcoal">{{ $booking->customer_name }}</dd>
                             </div>
+                            @if($booking->room_id || $booking->room_name)
+                                <div class="py-3">
+                                    <dt class="text-xs text-n-gray">Instansi</dt>
+                                    <dd class="mt-0.5 font-medium text-n-charcoal">{{ $booking->institution ?: '—' }}</dd>
+                                </div>
+                            @endif
                             <div class="py-3">
                                 <dt class="text-xs text-n-gray">No. Telepon</dt>
                                 <dd class="mt-0.5 font-medium text-n-charcoal">{{ $booking->customer_phone }}</dd>
@@ -107,29 +113,32 @@
 
                     <div class="rounded-xl border border-n-border bg-white p-6">
                         <h2 class="mb-4 text-base font-semibold text-n-charcoal">Jadwal penggunaan</h2>
+                        @if($booking->room_name || $booking->room)
+                            <p class="mb-4 text-sm font-semibold text-n-primary">{{ $booking->room_name ?? $booking->room->name }}</p>
+                        @endif
                         <dl class="grid grid-cols-2 gap-4">
                             <div>
                                 <dt class="mb-1 text-xs text-n-gray">Tanggal kunjungan</dt>
                                 <dd class="space-y-1 text-sm font-semibold">
                                     @forelse($booking->bookingDates as $bookingDate)
-                                        <span class="block">{{ $bookingDate->date->isoFormat('D MMMM Y') }}</span>
+                                        <span class="block">
+                                            {{ $bookingDate->date->isoFormat('D MMMM Y') }}
+                                            @if($bookingDate->start_time || $bookingDate->end_time || $booking->start_time)
+                                                <span class="font-normal text-n-gray">{{ \Carbon\Carbon::parse($bookingDate->start_time ?? $booking->start_time)->format('H:i') }}–{{ \Carbon\Carbon::parse($bookingDate->end_time ?? $booking->end_time)->format('H:i') }}</span>
+                                            @endif
+                                        </span>
                                     @empty
                                         <span>{{ \Carbon\Carbon::parse($booking->booking_date)->isoFormat('D MMMM Y') }}</span>
                                     @endforelse
                                 </dd>
                             </div>
                             <div>
-                                <dt class="mb-1 text-xs text-n-gray">Durasi</dt>
-                                <dd class="text-sm font-semibold">{{ $booking->duration }} hari</dd>
-                            </div>
-                            {{-- Jam selalu ditampilkan dari nilai booking yang tersimpan di database. --}}
-                            <div>
-                                <dt class="mb-1 text-xs text-n-gray">Jam mulai reservasi</dt>
-                                <dd class="text-sm font-semibold tabular-nums">{{ \Carbon\Carbon::parse($booking->start_time)->format('H:i') }}</dd>
+                                <dt class="mb-1 text-xs text-n-gray">{{ $booking->room_id ? 'Jumlah sesi' : 'Durasi' }}</dt>
+                                <dd class="text-sm font-semibold">{{ $booking->bookingDates->isNotEmpty() ? $booking->bookingDates->count() : $booking->duration }} {{ $booking->room_id ? 'sesi' : 'hari' }}</dd>
                             </div>
                             <div>
-                                <dt class="mb-1 text-xs text-n-gray">Jam selesai reservasi</dt>
-                                <dd class="text-sm font-semibold tabular-nums">{{ \Carbon\Carbon::parse($booking->end_time)->format('H:i') }}</dd>
+                                <dt class="mb-1 text-xs text-n-gray">Jumlah pengunjung</dt>
+                                <dd class="text-sm font-semibold tabular-nums">{{ $booking->visitor_count }} orang</dd>
                             </div>
                         </dl>
                         @if($booking->facility_notes)
@@ -341,10 +350,31 @@
                 <div class="rounded-xl border border-n-border bg-white p-6">
                     <h2 class="mb-4 text-base font-semibold text-n-charcoal">Rincian pembayaran</h2>
                     <div class="space-y-3 text-sm">
+                        @php
+                            $venuePackage = $booking->venue_package
+                                ? config('booking.venue_packages.'.$booking->venue_package)
+                                : null;
+                        @endphp
                         <div class="flex justify-between gap-4">
-                            <span class="text-n-gray">Biaya Day Pass ({{ $booking->visitor_category_label }})</span>
+                            <span class="text-n-gray">
+                                @if($booking->room_name || $booking->room)
+                                    {{ $venuePackage['label'] ?? 'Biaya sewa venue' }}
+                                    @if($booking->venue_duration_hours)
+                                        · {{ $booking->venue_duration_hours }} jam · {{ $booking->visitor_count }} orang
+                                        × {{ $booking->bookingDates->isNotEmpty() ? $booking->bookingDates->count() : $booking->duration }} sesi
+                                    @endif
+                                @else
+                                    Biaya Day Pass ({{ $booking->visitor_category_label }})
+                                @endif
+                            </span>
                             <span class="tabular-nums">Rp{{ number_format($booking->day_pass_price ?? 0, 0, ',', '.') }}</span>
                         </div>
+                        @if($booking->service_charge > 0)
+                            <div class="flex justify-between gap-4">
+                                <span class="text-n-gray">Service Charge ({{ number_format($booking->service_charge_rate, 0) }}%)</span>
+                                <span class="tabular-nums">Rp{{ number_format($booking->service_charge, 0, ',', '.') }}</span>
+                            </div>
+                        @endif
                         @if($booking->product_total > 0)
                         <div class="flex justify-between gap-4">
                             <span class="text-n-gray">Produk tambahan</span>
@@ -395,15 +425,15 @@
                         $waNumber = ltrim($booking->customer_phone, '0');
                         if (!str_starts_with($waNumber, '62')) $waNumber = '62' . $waNumber;
                         $bookingDateLabels = $booking->bookingDates->isNotEmpty()
-                            ? $booking->bookingDates->map(fn ($bookingDate) => $bookingDate->date->isoFormat('D MMMM Y'))->implode(', ')
+                            ? $booking->bookingDates->map(fn ($bookingDate) => $bookingDate->date->isoFormat('D MMMM Y').($bookingDate->start_time && $bookingDate->end_time ? ' '.$bookingDate->start_time.'-'.$bookingDate->end_time : ''))->implode(', ')
                             : \Carbon\Carbon::parse($booking->booking_date)->isoFormat('D MMMM Y');
 
                         // Pesan konfirmasi otomatis dengan data booking
                         $waMessage = urlencode(
                             "Halo {$booking->customer_name}, konfirmasi reservasi N-Space Anda:\n\n" .
                             "📋 Kode: {$booking->booking_code}\n" .
-                            "📅 Tanggal: {$bookingDateLabels}\n" .
-                            "⏱ Durasi: " . ($booking->bookingDates->isNotEmpty() ? $booking->bookingDates->count() : $booking->duration) . " hari\n" .
+                            "📍 Tempat: ".($booking->room_name ?? $booking->room?->name ?? 'Open Space')."\n" .
+                            "📅 Jadwal: {$bookingDateLabels}\n" .
                             ($booking->facility_notes ? "🪑 Fasilitas tambahan: {$booking->facility_notes}\n" : '') .
                             "💳 Total: Rp" . number_format($booking->total_price, 0, ',', '.') . "\n" .
                             "✅ Status: " . ucfirst($booking->status)

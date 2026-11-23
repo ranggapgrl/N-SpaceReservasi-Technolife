@@ -18,7 +18,11 @@
     $bookingIdCode = $booking->booking_code ?? ('#NDY-' . date('Ymd', strtotime($booking->created_at)) . sprintf('%02d', $booking->id));
     $customerName = $booking->customer_name ?? '-';
     $customerPhone = $booking->customer_phone ?? '-';
-    $passType = 'Study Space Area (All-Access)';
+    $passType = $booking->room_name ?? $booking->room?->name ?? 'Study Space Area (All-Access)';
+    $isRoomBooking = $booking->room_id !== null || $booking->room_name !== null;
+    $venuePackage = $booking->venue_package
+        ? config('booking.venue_packages.'.$booking->venue_package)
+        : null;
     $orderedProducts = $booking->products ?? $booking->items ?? collect();
     $visitDates = $booking->bookingDates->isNotEmpty()
         ? $booking->bookingDates->map(fn ($bookingDate) => $bookingDate->date->format('Y-m-d'))->all()
@@ -133,6 +137,12 @@
                             <dt class="text-xs font-semibold uppercase tracking-wider text-gray-500">Nama pemesan</dt>
                             <dd class="mt-1 break-words text-sm font-medium text-n-charcoal">{{ $customerName }}</dd>
                         </div>
+                        @if($isRoomBooking)
+                            <div class="border-t border-gray-100 py-3">
+                                <dt class="text-xs font-semibold uppercase tracking-wider text-gray-500">Instansi</dt>
+                                <dd class="mt-1 break-words text-sm font-medium text-n-charcoal">{{ $booking->institution ?: '—' }}</dd>
+                            </div>
+                        @endif
                         <div class="border-t border-gray-100 py-3">
                             <dt class="text-xs font-semibold uppercase tracking-wider text-gray-500">No. WhatsApp</dt>
                             <dd class="mt-1 break-words text-sm font-medium text-n-charcoal">{{ $customerPhone }}</dd>
@@ -140,27 +150,36 @@
                         <div class="border-t border-gray-100 py-3">
                             <dt class="text-xs font-semibold uppercase tracking-wider text-gray-500">Tanggal kunjungan</dt>
                             <dd class="mt-1 space-y-1 text-sm font-medium text-n-charcoal">
-                                @foreach($visitDates as $visitDate)
-                                    <span class="block">{{ date('d M Y', strtotime($visitDate)) }}</span>
-                                @endforeach
+                                @forelse($booking->bookingDates as $bookingDate)
+                                    <span class="block">
+                                        {{ $bookingDate->date->format('d M Y') }}
+                                        @if($bookingDate->start_time || $bookingDate->end_time || $booking->start_time)
+                                            · {{ date('H:i', strtotime($bookingDate->start_time ?? $booking->start_time)) }}–{{ date('H:i', strtotime($bookingDate->end_time ?? $booking->end_time)) }}
+                                        @endif
+                                    </span>
+                                @empty
+                                    @foreach($visitDates as $visitDate)
+                                        <span class="block">
+                                            {{ date('d M Y', strtotime($visitDate)) }}
+                                            · {{ date('H:i', strtotime($booking->start_time)) }}–{{ date('H:i', strtotime($booking->end_time)) }}
+                                        </span>
+                                    @endforeach
+                                @endforelse
                             </dd>
                         </div>
                         <div class="border-t border-gray-100 py-3">
-                            <dt class="text-xs font-semibold uppercase tracking-wider text-gray-500">Waktu</dt>
+                            <dt class="text-xs font-semibold uppercase tracking-wider text-gray-500">{{ $isRoomBooking ? 'Jumlah sesi' : 'Durasi' }}</dt>
                             <dd class="mt-1 text-sm font-medium text-n-charcoal">
-                                {{ date('H:i', strtotime($booking->start_time)) }}–{{ date('H:i', strtotime($booking->end_time)) }}
+                                {{ $booking->bookingDates->isNotEmpty() ? $booking->bookingDates->count() : $booking->duration }}
+                                {{ $isRoomBooking ? 'sesi' : 'hari' }}
                             </dd>
-                        </div>
-                        <div class="border-t border-gray-100 py-3">
-                            <dt class="text-xs font-semibold uppercase tracking-wider text-gray-500">Durasi</dt>
-                            <dd class="mt-1 text-sm font-medium text-n-charcoal">{{ $booking->duration }} hari full-day</dd>
                         </div>
                         <div class="border-t border-gray-100 py-3">
                             <dt class="text-xs font-semibold uppercase tracking-wider text-gray-500">Jumlah pengunjung</dt>
                             <dd class="mt-1 text-sm font-medium text-n-charcoal">{{ $booking->visitor_count }} orang</dd>
                         </div>
                         <div class="border-t border-gray-100 py-3 sm:col-span-2">
-                            <dt class="text-xs font-semibold uppercase tracking-wider text-gray-500">Jenis akses</dt>
+                            <dt class="text-xs font-semibold uppercase tracking-wider text-gray-500">Tempat</dt>
                             <dd class="mt-1 text-sm font-medium text-n-charcoal">{{ $passType }}</dd>
                         </div>
                         @if($booking->facility_notes)
@@ -176,9 +195,25 @@
                     <h2 id="cost-breakdown-heading" class="font-headline text-lg font-semibold text-n-charcoal">Rincian biaya</h2>
                     <div class="mt-4 divide-y divide-gray-100 border-y border-gray-100">
                         <div class="flex items-start justify-between gap-4 py-3 text-sm">
-                            <span class="text-gray-600">Study Space <span class="text-gray-400">· {{ $booking->duration }} hari</span></span>
+                            <span class="text-gray-600">
+                                @if($isRoomBooking)
+                                    {{ $passType }} · {{ $venuePackage['label'] ?? 'Sewa venue' }}
+                                    @if($booking->venue_duration_hours)
+                                        ({{ $booking->venue_duration_hours }} jam)
+                                    @endif
+                                    · {{ $booking->visitor_count }} orang × {{ $booking->bookingDates->isNotEmpty() ? $booking->bookingDates->count() : $booking->duration }} sesi
+                                @else
+                                    Study Space · {{ $booking->bookingDates->isNotEmpty() ? $booking->bookingDates->count() : $booking->duration }} hari
+                                @endif
+                            </span>
                             <span class="shrink-0 font-medium text-n-charcoal">Rp{{ number_format($booking->day_pass_price, 0, ',', '.') }}</span>
                         </div>
+                        @if($isRoomBooking && $booking->service_charge > 0)
+                            <div class="flex items-start justify-between gap-4 py-3 text-sm">
+                                <span class="text-gray-600">Service Charge ({{ number_format($booking->service_charge_rate, 0) }}%)</span>
+                                <span class="shrink-0 font-medium text-n-charcoal">Rp{{ number_format($booking->service_charge, 0, ',', '.') }}</span>
+                            </div>
+                        @endif
                         @foreach($orderedProducts as $item)
                             @php
                                 $prodName = $item->name ?? $item->product->name ?? 'Produk';
@@ -308,8 +343,8 @@
                            "- No. WA: {$customerPhone}%0A%0A" .
                            "*INFORMASI AKSES*%0A" .
                            "- Jenis: {$passType}%0A" .
-                           "- Tanggal: " . implode(', ', array_map(fn ($date) => date('d-m-Y', strtotime($date)), $visitDates)) . "%0A" .
-                           "- Durasi: " . count($visitDates) . " Hari Full-day%0A" .
+                           "- Tempat: {$passType}%0A" .
+                           "- Jadwal: " . implode(', ', array_map(fn ($date) => date('d-m-Y', strtotime($date)), $visitDates)) . "%0A" .
                            ($booking->facility_notes ? "- Fasilitas tambahan: {$booking->facility_notes}%0A" : '') .
                            "{$snackText}%0A" .
                            "*PEMBAYARAN*%0A" .

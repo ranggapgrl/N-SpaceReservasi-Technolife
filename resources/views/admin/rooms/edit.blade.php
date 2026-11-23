@@ -4,6 +4,7 @@
 
 @section('content')
 
+    <div style="--color-n-primary: #B1002C; --color-n-primary-dark: #9F0028; --color-n-bg: #FBF9F8; --color-n-charcoal: #1B1C1C; --color-n-gray: #5C3F3F; --color-n-border: #EAEAEA; font-family: Inter, sans-serif;">
     <div class="max-w-2xl">
         <a href="{{ route('admin.rooms.index') }}" class="inline-flex items-center text-n-gray text-sm hover:text-n-primary mb-6 transition-colors">
             <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -15,7 +16,7 @@
         <div class="bg-white rounded-2xl border border-n-border shadow-sm p-6 md:p-8">
             <h2 class="text-lg font-semibold mb-6">Edit: {{ $room->name }}</h2>
 
-            <form action="{{ route('admin.rooms.update', $room) }}" method="POST" class="space-y-5">
+            <form action="{{ route('admin.rooms.update', $room) }}" method="POST" enctype="multipart/form-data" class="space-y-5">
                 @csrf
                 @method('PUT')
 
@@ -30,7 +31,8 @@
                 {{-- Type --}}
                 <div>
                     <label class="block text-sm font-medium text-n-charcoal mb-1.5">Tipe <span class="text-red-500">*</span></label>
-                    <input class="w-full border border-n-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-n-primary/30 focus:border-n-primary transition @error('type') border-red-400 @enderror">
+                    <input type="text" name="type" value="{{ old('type', $room->type) }}"
+                        class="w-full border border-n-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-n-primary/30 focus:border-n-primary transition @error('type') border-red-400 @enderror">
                     @error('type') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
                 </div>
 
@@ -42,44 +44,24 @@
                     @error('description') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
                 </div>
 
-                {{-- Capacity & Price --}}
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-n-charcoal mb-1.5">Kapasitas (orang) <span class="text-red-500">*</span></label>
-                        <input type="number" name="capacity" value="{{ old('capacity', $room->capacity) }}" min="1"
-                            class="w-full border border-n-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-n-primary/30 focus:border-n-primary transition @error('capacity') border-red-400 @enderror">
-                        @error('capacity') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-n-charcoal mb-1.5">Harga / Jam (Rp) <span class="text-red-500">*</span></label>
-                        <input type="number" name="price_per_hour" value="{{ old('price_per_hour', $room->price_per_hour) }}" min="0"
-                            class="w-full border border-n-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-n-primary/30 focus:border-n-primary transition @error('price_per_hour') border-red-400 @enderror">
-                        @error('price_per_hour') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
-                    </div>
+                {{-- Capacity --}}
+                <div>
+                    <label class="block text-sm font-medium text-n-charcoal mb-1.5">Kapasitas (orang) <span class="text-red-500">*</span></label>
+                    <input type="number" name="capacity" value="{{ old('capacity', $room->capacity) }}" min="1"
+                        class="w-full border border-n-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-n-primary/30 focus:border-n-primary transition @error('capacity') border-red-400 @enderror">
+                    @error('capacity') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
                 </div>
+                <p class="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-n-charcoal">
+                    Minimum order otomatis: Meeting Room 5 orang, Training Room 20 orang.
+                    Tarif venue:
+                    @foreach(config('booking.venue_packages') as $package)
+                        {{ $package['label'] }} {{ $package['duration_hours'] }} jam Rp{{ number_format($package['price_per_person'], 0, ',', '.') }}/orang{{ $loop->last ? '' : ',' }}
+                    @endforeach
+                    + Service Charge {{ config('booking.venue_service_charge_percent') }}%.
+                </p>
 
-                {{-- Images --}}
-                <div>
-                    <label class="block text-sm font-medium text-n-charcoal mb-1.5">URL Gambar Utama</label>
-                    <input type="url" name="image" value="{{ old('image', $room->image) }}"
-                        class="w-full border border-n-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-n-primary/30 focus:border-n-primary transition @error('image') border-red-400 @enderror"
-                        placeholder="https://...">
-                    @error('image') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-n-charcoal mb-1.5">URL Gambar 2 <span class="text-n-gray text-xs">(opsional)</span></label>
-                    <input type="url" name="image_2" value="{{ old('image_2', $room->image_2) }}"
-                        class="w-full border border-n-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-n-primary/30 focus:border-n-primary transition @error('image_2') border-red-400 @enderror"
-                        placeholder="https://...">
-                    @error('image_2') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-n-charcoal mb-1.5">URL Gambar 3 <span class="text-n-gray text-xs">(opsional)</span></label>
-                    <input type="url" name="image_3" value="{{ old('image_3', $room->image_3) }}"
-                        class="w-full border border-n-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-n-primary/30 focus:border-n-primary transition @error('image_3') border-red-400 @enderror"
-                        placeholder="https://...">
-                    @error('image_3') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
-                </div>
+                {{-- Gambar lama tetap terlihat dan tidak berubah jika file baru tidak dipilih. --}}
+                @include('admin.rooms._image_fields', ['room' => $room])
 
                 {{-- Facilities --}}
                 <div>
@@ -115,6 +97,7 @@
                 </div>
             </form>
         </div>
+    </div>
     </div>
 
 @endsection

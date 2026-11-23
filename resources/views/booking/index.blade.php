@@ -15,13 +15,9 @@
 <style>
     {{-- CSS khusus halaman booking. CSS global ada di partials/nss-style.blade.php --}}
 
-    /* overflow:hidden mencegah scrollbar browser muncul akibat footer di bawah wizard.
-       Scroll hanya boleh terjadi di dalam .nss-bk-main. height:100% agar body setinggi viewport. */
     html, body { overflow: hidden; height: 100%; }
 
-    /* Wizard container: tinggi penuh layar, flex kolom (header atas, konten bawah).
-       dvh = dynamic viewport height, memperhitungkan keyboard virtual di HP. */
-    .nss-bk { --nss-offset: 0px; height: 100vh; height: calc(100dvh - var(--nss-offset)); display: flex; flex-direction: column; background: var(--nss-paper); }
+    .nss-bk { height: 100vh; height: 100dvh; display: flex; flex-direction: column; background: var(--nss-paper); }
 
     /* Header sticky: tetap terlihat saat konten discroll */
     .nss-bk-head { position: sticky; top: 0; z-index: 30; background: var(--nss-paper); }
@@ -41,14 +37,11 @@
     .nss-step-label.is-current { font-weight: 600; color: var(--nss-ink); }
     @media (min-width: 640px) { .nss-step-label { display: block; } }
 
-    /* Area konten scroll. min-height:0 WAJIB agar overflow-y:auto bekerja di dalam flexbox
-       (default min-height:auto membuat elemen meluber keluar dari container). */
     .nss-bk-main { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; padding-top: .5rem; padding-bottom: 0; }
 
-    /* min-height:100% = bar aksi sticky-bottom selalu ada di bawah meski form pendek */
     .nss-form-wrapper { display: flex; flex-direction: column; flex: 1; min-height: 100%; }
 
-    /* Grid 1 kolom di mobile, 2 kolom di desktop */
+    /* Kolom ringkasan baru dipisah pada desktop agar konten form tetap lega. */
     .nss-bk-grid { flex: 1; display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem; align-items: start; padding-bottom: 1rem; }
 
     /* ── Penyesuaian Responsif Mobile Agar ke Tengah ───────────────────── */
@@ -84,15 +77,15 @@
     .nss-bk .nss-label { font-size: .8125rem; margin-bottom: .375rem; display: block; font-weight: 500; }
     .nss-bk .nss-field { width: 100%; box-sizing: border-box; padding: 0 0.875rem; border: 1px solid var(--nss-line); background: #fff; height: 2.75rem; font-size: 1rem; border-radius: 8px; transition: border-color .15s, box-shadow .15s; }
     .nss-bk .nss-field:focus { border-color: var(--nss-primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--nss-primary) 18%, transparent); outline: none; }
-    .nss-time-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .625rem; margin-top: .875rem; }
+    .nss-time-fields { display: grid; grid-template-columns: minmax(0, 1fr); gap: .75rem; margin-top: 0; align-items: start; }
     .nss-field-error { margin-top: .25rem; color: #b91c1c; font-size: .75rem; }
     .nss-bk .nss-btn { height: 3rem; padding: 0 1.5rem; font-size: .875rem; min-width: 8rem; border-radius: 8px; }
 
     /* Kartu pilihan tarif: gap dikecilkan agar tombol Lanjut tidak terpotong */
     .nss-tarifs { display: grid; gap: .4rem; width: 100%; margin-inline: auto; }
-    .nss-tarif { display: flex; flex-wrap: wrap; align-items: center; gap: .2rem .5rem; padding: .625rem .875rem; background: #fff; border: 2px solid transparent; border-radius: 10px; cursor: pointer; transition: border-color .2s; }
-    label:hover > .nss-tarif { border-color: var(--nss-line); }
-    input:checked + .nss-tarif { border-color: var(--nss-primary); }
+    .nss-tarif { display: flex; flex-wrap: wrap; align-items: center; gap: .2rem .5rem; padding: .625rem .875rem; background: #fff; border: 2px solid var(--nss-line); border-radius: 10px; cursor: pointer; transition: border-color .2s, background .2s; }
+    label:hover > .nss-tarif { border-color: color-mix(in srgb, var(--nss-primary) 35%, var(--nss-line)); }
+    input:checked + .nss-tarif { border-color: var(--nss-primary); background: color-mix(in srgb, var(--nss-primary) 5%, #fff); }
     input:focus-visible + .nss-tarif { outline: 2px solid var(--nss-primary); outline-offset: 2px; }
 
     /* Radio kustom: box-shadow inset meniru tampilan radio button lingkaran */
@@ -102,6 +95,38 @@
     .nss-tarif-price { margin-left: auto; font-size: clamp(1.125rem, 4vw, 1.5rem); font-weight: 700; line-height: 1.1; white-space: nowrap; }
     .nss-tarif-price .rp  { font-size: .8125rem; font-weight: 600; }
     .nss-tarif-price .per { margin-left: .2rem; font-size: .75rem; font-weight: 500; color: var(--nss-muted); }
+    .nss-bk .nss-tarif-price { font-size: 1.0625rem; }
+    .nss-bk .nss-tarif-price .rp { font-size: .75rem; }
+
+    /* Pilihan jenis tempat: dua kartu berdampingan, masing-masing menjelaskan isinya */
+    .nss-modes { display: grid; grid-template-columns: minmax(0, 1fr); gap: .5rem; }
+    .nss-modes > label { display: block; }
+    .nss-mode-card { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: .75rem; row-gap: .125rem; align-items: start; height: 100%; box-sizing: border-box; padding: .875rem 1rem; }
+    .nss-mode-card .nss-dot { grid-row: 1 / span 3; margin-top: .125rem; }
+    .nss-mode-name { font-size: .9375rem; font-weight: 600; }
+    .nss-mode-desc { font-size: .8125rem; line-height: 1.4; color: var(--nss-muted); }
+    .nss-mode-spec { margin-top: .375rem; font-size: .75rem; font-weight: 500; font-variant-numeric: tabular-nums; }
+    @media (min-width: 640px) { .nss-modes { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+    /* Daftar venue: satu baris per ruangan, terpilih ditandai garis dan titik yang sama dengan radio lain */
+    .nss-venues { display: grid; gap: .5rem; margin-top: .5rem; }
+    .nss-venue { display: flex; align-items: flex-start; gap: .875rem; width: 100%; box-sizing: border-box; padding: .875rem 1rem; text-align: left; background: #fff; border: 2px solid var(--nss-line); border-radius: 10px; cursor: pointer; transition: border-color .2s, background .2s; }
+    .nss-venue:hover:not(:disabled) { border-color: color-mix(in srgb, var(--nss-primary) 35%, var(--nss-line)); }
+    .nss-venue[aria-pressed="true"] { border-color: var(--nss-primary); background: color-mix(in srgb, var(--nss-primary) 5%, #fff); }
+    .nss-venue[aria-pressed="true"] .nss-dot { box-shadow: inset 0 0 0 6px currentColor; }
+    .nss-venue:focus-visible { outline: 2px solid var(--nss-primary); outline-offset: 2px; }
+    .nss-venue:disabled { opacity: .6; cursor: not-allowed; }
+    .nss-venue-img { flex: none; width: 5rem; height: 5rem; object-fit: cover; border-radius: 8px; background: #e5eaea; }
+    .nss-venue-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: .125rem; }
+    .nss-venue-head { display: flex; align-items: flex-start; justify-content: space-between; gap: .75rem; }
+    .nss-venue-name { font-size: .9375rem; font-weight: 600; }
+    .nss-venue-type { font-size: .8125rem; color: var(--nss-muted); }
+    .nss-venue-spec { display: flex; flex-wrap: wrap; gap: .125rem 1rem; margin-top: .375rem; font-size: .8125rem; font-variant-numeric: tabular-nums; }
+    .nss-venue-spec b { font-weight: 600; }
+    .nss-venue-desc { margin-top: .375rem; font-size: .8125rem; line-height: 1.45; color: var(--nss-muted); }
+    .nss-venue-fac { font-size: .75rem; line-height: 1.45; color: var(--nss-muted); }
+    .nss-venue-warn { margin-top: .375rem; font-size: .8125rem; font-weight: 500; color: #b91c1c; }
+    @media (min-width: 640px) { .nss-venue-img { width: 7rem; height: 7rem; } }
 
     /* Galeri mobile mengikuti lebar kolom; tinggi dibatasi agar rasio gambar
        tidak memicu overflow horizontal pada layar sempit. */
@@ -111,9 +136,31 @@
     @media (min-width: 1024px) { .nss-gal-frame { max-height: 280px; aspect-ratio: 16 / 6; } }
     .nss-tabs-wrap { margin-top: .375rem; }
 
-    /* Tanggal & durasi */
-    .nss-grid2 { display: grid; gap: .875rem; width: 100%; max-width: 34rem; margin-inline: auto; }
-    @media (min-width: 640px) { .nss-grid2 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    /* Paket tetap selebar form; tanggal dan jumlah orang dibagi setelah ruang cukup. */
+    .nss-step2 { display: grid; gap: 1.25rem; width: 100%; }
+    .nss-package-fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
+    .nss-package-options { display: grid; grid-template-columns: minmax(0, 1fr); gap: .75rem; margin-top: .5rem; }
+    .nss-package-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: .125rem .75rem; min-height: 4.5rem; padding: .875rem 1rem; box-sizing: border-box; background: #fff; border: 2px solid var(--nss-line); border-radius: 10px; cursor: pointer; transition: border-color .2s, background .2s; }
+    .nss-package-options > label { display: block; }
+    label:hover > .nss-package-card { border-color: color-mix(in srgb, var(--nss-primary) 35%, var(--nss-line)); }
+    input:checked + .nss-package-card { border-color: var(--nss-primary); background: color-mix(in srgb, var(--nss-primary) 5%, #fff); }
+    input:focus-visible + .nss-package-card { outline: 2px solid var(--nss-primary); outline-offset: 2px; }
+    .nss-package-card-name { font-size: .9375rem; font-weight: 600; }
+    .nss-package-card-duration { font-size: .8125rem; color: var(--nss-muted); }
+    .nss-package-card-price { font-size: .875rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+    .nss-package-card-name { grid-column: 1; }
+    .nss-package-card-duration { grid-column: 1; }
+    .nss-package-card-price { grid-column: 2; grid-row: 1 / span 2; max-width: 9rem; text-align: right; line-height: 1.35; }
+    .nss-date-participant-grid { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: 1.25rem; }
+    .nss-date-column { min-width: 0; display: flex; flex-direction: column; gap: .75rem; }
+    .nss-attendee-panel { min-width: 0; padding: 1rem; border: 1px solid var(--nss-line); border-radius: 12px; background: #fff; }
+    .nss-capacity-warning { margin-bottom: .75rem; padding: .75rem; border: 1px solid #fed7aa; border-radius: 8px; background: #fff7ed; color: #9a3412; font-size: .875rem; }
+    .nss-schedule-list { display: grid; gap: .75rem; }
+    .nss-schedule-card { min-width: 0; padding: 1rem; border: 1px solid var(--nss-line); border-radius: 12px; background: #fff; }
+    /* float:left + width:100% membuat legend jadi judul biasa di dalam kartu (tidak menembus garis border) */
+    .nss-schedule-card legend { float: left; width: 100%; max-width: 100%; margin: 0 0 .75rem; padding: 0; color: var(--nss-ink); font-size: .875rem; font-weight: 600; line-height: 1.4; }
+    .nss-schedule-card legend + * { clear: both; }
+    .nss-cal { width: 100%; max-width: 22rem; background: #fff; border: 1px solid var(--nss-line); border-radius: 10px; padding: .75rem; }
     .nss-stepper { display: flex; max-width: 12rem; height: 2.75rem; border: 1px solid var(--nss-line); border-radius: 8px; background: #fff; overflow: hidden; }
     .nss-stepper:focus-within { border-color: var(--nss-primary); }
     .nss-stepper > button { display: grid; place-items: center; width: 2.75rem; transition: background .15s; }
@@ -124,7 +171,6 @@
     .nss-note { margin-top: .5rem; font-size: .875rem; color: var(--nss-muted); }
 
     /* ── Kalender kustom (tanggal ditutup admin tidak bisa diklik) ─────── */
-    .nss-cal { max-width: 20rem; background: #fff; border: 1px solid var(--nss-line); border-radius: 10px; padding: .75rem; }
     .nss-cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: .5rem; }
     .nss-cal-head button { width: 2rem; height: 2rem; border-radius: 6px; font-size: 1.125rem; }
     .nss-cal-head button:hover:not(:disabled) { background: var(--nss-paper); }
@@ -161,7 +207,7 @@
     /* Form data pemesan */
     .nss-fields { display: grid; gap: 1rem; width: 100%; max-width: 28rem; margin-inline: auto; }
 
-    /* Bar aksi sticky di bawah area scroll. env(safe-area-inset-bottom) = ruang notch iPhone. */
+    /* Bar aksi selalu terjangkau di bawah area konten booking. */
     .nss-bar { position: sticky; bottom: 0; z-index: 20; display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin: auto -1rem 0; padding: .75rem 1rem calc(.75rem + env(safe-area-inset-bottom, 0px)); background: var(--nss-paper); border-top: 1px solid var(--nss-line); box-shadow: 0 -6px 16px -10px rgba(15, 30, 40, .18); }
     .nss-bar-info  { min-width: 0; margin-right: auto; }
     .nss-bar-total { font-size: 1.125rem; font-weight: 700; line-height: 1.2; color: var(--nss-primary); font-variant-numeric: tabular-nums; }
@@ -175,6 +221,10 @@
     .nss-row { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
     .nss-row dt { color: var(--nss-muted); font-weight: 400; }
     .nss-row dd { color: var(--nss-ink); font-weight: 600; text-align: right; }
+    .nss-summary-dates { display: grid; justify-items: end; gap: .5rem; }
+    .nss-summary-date { display: grid; gap: .125rem; }
+    .nss-summary-date-label { font-size: .8125rem; line-height: 1.4; }
+    .nss-summary-date-time { color: var(--nss-muted); font-size: .75rem; font-weight: 400; font-variant-numeric: tabular-nums; }
     .nss-divider { height: 1px; margin: 1rem 0 0; background: #e4e5e7; }
     .nss-pass-breakdown { padding-top: 1rem; }
     .nss-pass-breakdown .nss-row dd { font-weight: 400; }
@@ -191,7 +241,7 @@
     }
 
     /* HP sangat kecil (<380px) */
-    @media (max-width: 380px) { .nss-bk .nss-btn { min-width: 0; padding: 0 1.125rem; } .nss-tarif { padding: .75rem; } }
+    @media (max-width: 380px) { .nss-bk .nss-btn { min-width: 0; padding: 0 1.125rem; } .nss-tarif { padding: .75rem; } .nss-package-card { padding-inline: .75rem; } }
 
     /* Tablet (>=640px) */
     @media (min-width: 640px) {
@@ -201,9 +251,20 @@
         .nss-panel      { padding-bottom: .75rem; }
         .nss-tarif      { padding: .75rem 1rem; }
         .nss-bk-aside   { max-width: 22rem; }
+        .nss-package-options { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        .nss-package-card { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: .25rem; min-height: 7.5rem; }
+        .nss-package-card-name, .nss-package-card-duration, .nss-package-card-price { max-width: 100%; }
+        .nss-package-card-price { font-size: .8125rem; text-align: left; white-space: nowrap; }
+        .nss-time-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .nss-time-fields .nss-label { min-height: 2.5em; } /* cadangkan 2 baris agar kedua input sejajar */
     }
 
-    /* Desktop (>=1024px): 2 kolom, aside sticky, bar tidak sticky lagi */
+    @media (min-width: 768px) {
+        .nss-date-participant-grid { grid-template-columns: minmax(0, 1fr) minmax(13.5rem, .65fr); }
+        .nss-attendee-panel { position: sticky; top: .25rem; }
+    }
+
+    /* Desktop: ringkasan sticky di samping form, dengan lebar yang tetap terbaca. */
     @media (min-width: 1024px) {
         .nss-bk-main  { padding-top: 1rem; padding-bottom: 1rem; }
         .nss-bk-grid  { grid-template-columns: minmax(0, 1fr) 22rem; gap: 2rem; max-width: 66rem; margin-inline: auto; width: 100%; }
@@ -288,13 +349,37 @@
                             <div x-show="step === 1"
                                 x-transition:enter="nss-enter" x-transition:enter-start="nss-enter-from" x-transition:enter-end="nss-enter-to">
 
-                                <!-- Diubah menjadi statis open-space -->
-                                <input type="hidden" name="room_type" value="open-space">
-                                <fieldset style="border:0;margin:0;padding:0;min-width:0">
+                                <fieldset style="border:0;margin:0 0 1.5rem;padding:0;min-width:0">
+                                    <legend class="nss-radio">Pilih jenis tempat</legend>
+                                    <div class="nss-modes">
+                                        <label>
+                                            <input type="radio" name="booking_type" value="open_space" x-model="form.booking_type" class="nss-radio">
+                                            <span class="nss-tarif nss-mode-card">
+                                                <span class="nss-dot"></span>
+                                                <span class="nss-mode-name">NEEDS Study Space</span>
+                                                <span class="nss-mode-desc">Meja bersama untuk belajar, bayar per hari.</span>
+                                                <span class="nss-mode-spec">Kapasitas {{ config('booking.open_space_capacity', 50) }} orang</span>
+                                            </span>
+                                        </label>
+                                        <label>
+                                            <input type="radio" name="booking_type" value="room" x-model="form.booking_type" class="nss-radio">
+                                            <span class="nss-tarif nss-mode-card">
+                                                <span class="nss-dot"></span>
+                                                <span class="nss-mode-name">Venue lainnya</span>
+                                                <span class="nss-mode-desc">Ruang meeting dan training, disewa per paket.</span>
+                                                <span class="nss-mode-spec">{{ $rooms->count() }} ruangan tersedia</span>
+                                            </span>
+                                        </label>
+                                    </div>
+                                </fieldset>
+
+                                <input type="hidden" name="room_id" :value="form.booking_type === 'room' ? form.room_id : ''">
+
+                                <fieldset x-show="form.booking_type === 'open_space'" style="border:0;margin:0;padding:0;min-width:0">
                                     <legend class="nss-radio">Pilih tarif</legend>
                                     <div class="nss-tarifs">
                                         <label>
-                                            <input type="radio" name="visitor_category" value="mahasiswa" x-model="form.category" class="nss-radio">
+                                            <input type="radio" name="visitor_category" value="mahasiswa" x-model="form.category" :disabled="form.booking_type !== 'open_space'" class="nss-radio">
                                             <div class="nss-tarif">
                                                 <span class="nss-dot"></span>
                                                 <span class="nss-tarif-name">Mahasiswa</span>
@@ -302,7 +387,7 @@
                                             </div>
                                         </label>
                                         <label>
-                                            <input type="radio" name="visitor_category" value="umum" x-model="form.category" class="nss-radio">
+                                            <input type="radio" name="visitor_category" value="umum" x-model="form.category" :disabled="form.booking_type !== 'open_space'" class="nss-radio">
                                             <div class="nss-tarif">
                                                 <span class="nss-dot"></span>
                                                 <span class="nss-tarif-name">Umum</span>
@@ -312,7 +397,7 @@
                                     </div>
                                 </fieldset>
 
-                                <section aria-labelledby="areas-title">
+                                <section x-show="form.booking_type === 'open_space'" aria-labelledby="areas-title">
                                     <h2 id="areas-title" class="nss-display nss-areas-head">Area di dalam Needs Study Space</h2>
 
                                     {{-- Galeri 12 foto area, slideshow otomatis 3 detik --}}
@@ -342,113 +427,207 @@
                                         </div>
                                     </div>
                                 </section>
+
+                                <section x-show="form.booking_type === 'room'" x-cloak aria-labelledby="venue-title">
+                                    <h2 id="venue-title" class="nss-display nss-areas-head">Pilih meeting room atau venue</h2>
+                                    <div class="nss-venues">
+                                        @forelse($rooms as $room)
+                                            @php
+                                                $minimumAttendees = $room->minimumAttendees();
+                                                $capacityBelowMinimum = $room->capacity < $minimumAttendees;
+                                            @endphp
+                                            <button type="button" class="nss-venue"
+                                                @click="selectRoom('{{ $room->id }}')"
+                                                :disabled="@js($capacityBelowMinimum)"
+                                                :aria-pressed="String(form.room_id) === '{{ $room->id }}'">
+                                                @if($room->image_url)
+                                                    <img src="{{ $room->image_url }}" alt="" class="nss-venue-img" loading="lazy">
+                                                @endif
+                                                <span class="nss-venue-body">
+                                                    <span class="nss-venue-head">
+                                                        <span class="nss-venue-name">{{ $room->name }}</span>
+                                                        <span class="nss-dot" aria-hidden="true"></span>
+                                                    </span>
+                                                    <span class="nss-venue-type">{{ $room->type }}</span>
+                                                    <span class="nss-venue-spec">
+                                                        <span>Kapasitas <b>{{ $room->capacity }}</b> orang</span>
+                                                        <span>Minimum <b>{{ $minimumAttendees }}</b> orang</span>
+                                                    </span>
+                                                    @if($capacityBelowMinimum)
+                                                        <span class="nss-venue-warn">Belum bisa dipesan: kapasitas di bawah minimum pemesanan. Hubungi admin.</span>
+                                                    @endif
+                                                    @if($room->description)
+                                                        <span class="nss-venue-desc">{{ $room->description }}</span>
+                                                    @endif
+                                                    @if($room->facilities)
+                                                        <span class="nss-venue-fac">{{ implode(', ', $room->facilities) }}</span>
+                                                    @endif
+                                                </span>
+                                            </button>
+                                        @empty
+                                            <p class="nss-note">Belum ada venue yang tersedia. Silakan hubungi admin.</p>
+                                        @endforelse
+                                    </div>
+                                    @if($rooms->isNotEmpty())
+                                        <p class="nss-note">Paket sewa dipilih di langkah berikutnya.</p>
+                                    @endif
+                                </section>
                             </div>
 
                             <!-- ============ LANGKAH 2: TANGGAL, JAM, DAN JUMLAH ORANG ============ -->
-                            <div x-show="step === 2" x-cloak class="nss-grid2"
+                            <div x-show="step === 2" x-cloak class="nss-step2"
                                 x-transition:enter="nss-enter" x-transition:enter-start="nss-enter-from" x-transition:enter-end="nss-enter-to">
 
-                                <div>
-                                    <span class="nss-label">Pilih tanggal kunjungan</span>
-                                    <input type="hidden" name="date" :value="form.dates[0] || ''">
-                                    <input type="hidden" name="duration" :value="form.dates.length">
-                                    <template x-for="date in form.dates" :key="date">
-                                        <input type="hidden" name="dates[]" :value="date">
-                                    </template>
-
-                                    <div class="nss-cal">
-                                        <div class="nss-cal-head">
-                                            <button type="button" @click="prevMonth()" :disabled="!canPrev()" aria-label="Bulan sebelumnya">&lsaquo;</button>
-                                            <strong x-text="monthLabel()"></strong>
-                                            <button type="button" @click="nextMonth()" aria-label="Bulan berikutnya">&rsaquo;</button>
+                                <fieldset x-show="form.booking_type === 'room'" x-cloak class="nss-package-fieldset">
+                                        <legend class="nss-label">Pilih paket sewa</legend>
+                                        <div class="nss-package-options">
+                                            @foreach($venuePackages as $packageKey => $package)
+                                                <label class="cursor-pointer">
+                                                    <input type="radio"
+                                                        name="venue_package"
+                                                        value="{{ $packageKey }}"
+                                                        x-model="form.venue_package"
+                                                        @change="normalizeVenueStartTimes()"
+                                                        :required="form.booking_type === 'room'"
+                                                        :disabled="form.booking_type !== 'room'"
+                                                        class="peer sr-only">
+                                                    <span class="nss-package-card">
+                                                        <span class="nss-package-card-name">{{ $package['label'] }}</span>
+                                                        <span class="nss-package-card-duration">{{ $package['duration_hours'] }} jam</span>
+                                                        <span class="nss-package-card-price">Rp{{ number_format($package['price_per_person'], 0, ',', '.') }} / orang</span>
+                                                    </span>
+                                                </label>
+                                            @endforeach
                                         </div>
+                                        <p class="nss-note mt-2">Setiap paket sewa dikenakan Service Charge {{ $venueServiceChargePercent }}%.</p>
+                                        @error('venue_package')
+                                            <p class="nss-field-error">{{ $message }}</p>
+                                        @enderror
+                                </fieldset>
 
-                                        <div class="nss-cal-grid nss-cal-dow">
-                                            <template x-for="d in ['Min','Sen','Sel','Rab','Kam','Jum','Sab']" :key="d">
-                                                <span x-text="d"></span>
-                                            </template>
-                                        </div>
-
-                                        <div class="nss-cal-grid">
-                                            <template x-for="(cell, i) in calendarCells()" :key="i">
-                                                <button type="button" class="nss-day"
-                                                        :class="cell ? {
-                                                            'is-selected': form.dates.includes(cell.str),
-                                                            'is-past': cell.past,
-                                                            'is-blocked': cell.blocked
-                                                        } : {}"
-                                                        :disabled="!cell || cell.disabled"
-                                                        :title="cell && cell.blocked ? 'Ditutup / penuh' : ''"
-                                                        @click="cell && toggleDate(cell.str)"
-                                                        x-text="cell ? cell.day : ''"></button>
-                                            </template>
-                                        </div>
-
-                                        <div class="nss-cal-legend">
-                                            <span><i></i>Ditutup / penuh</span>
-                                        </div>
-                                    </div>
-
-                                    <div class="nss-note" aria-live="polite">
-                                        <span x-text="form.dates.length"></span> tanggal dipilih
-                                        <ul class="mt-2 space-y-1" x-show="form.dates.length">
+                                <div class="nss-date-participant-grid">
+                                    <div class="nss-date-column">
+                                        <div>
+                                            <h2 class="nss-label">Pilih tanggal kunjungan</h2>
+                                            <input type="hidden" name="date" :value="form.dates[0] || ''">
+                                            <input type="hidden" name="duration" :value="form.dates.length">
                                             <template x-for="date in form.dates" :key="date">
-                                                <li class="flex items-center justify-between gap-2">
-                                                    <span x-text="formatDate(date)"></span>
-                                                    <button type="button" class="nss-small" @click="toggleDate(date)">Hapus</button>
-                                                </li>
+                                                <input type="hidden" name="dates[]" :value="date">
                                             </template>
-                                        </ul>
+
+                                            <div class="nss-cal">
+                                                <div class="nss-cal-head">
+                                                    <button type="button" @click="prevMonth()" :disabled="!canPrev()" aria-label="Bulan sebelumnya">&lsaquo;</button>
+                                                    <strong x-text="monthLabel()"></strong>
+                                                    <button type="button" @click="nextMonth()" aria-label="Bulan berikutnya">&rsaquo;</button>
+                                                </div>
+
+                                                <div class="nss-cal-grid nss-cal-dow">
+                                                    <template x-for="d in ['Min','Sen','Sel','Rab','Kam','Jum','Sab']" :key="d">
+                                                        <span x-text="d"></span>
+                                                    </template>
+                                                </div>
+
+                                                <div class="nss-cal-grid">
+                                                    <template x-for="(cell, i) in calendarCells()" :key="i">
+                                                        <button type="button" class="nss-day"
+                                                                :class="cell ? {
+                                                                    'is-selected': form.dates.includes(cell.str),
+                                                                    'is-past': cell.past,
+                                                                    'is-blocked': cell.blocked
+                                                                } : {}"
+                                                                :disabled="!cell || cell.disabled"
+                                                                :title="cell && cell.blocked ? 'Ditutup / penuh' : ''"
+                                                                @click="cell && toggleDate(cell.str)"
+                                                                x-text="cell ? cell.day : ''"></button>
+                                                    </template>
+                                                </div>
+
+                                                <div class="nss-cal-legend">
+                                                    <span><i></i>Ditutup / penuh</span>
+                                                </div>
+                                            </div>
+
+                                            <p class="nss-note" aria-live="polite">
+                                                <span x-text="form.dates.length"></span> tanggal dipilih
+                                            </p>
+                                        </div>
+
+                                        <div class="nss-schedule-list">
+                                            <template x-for="date in form.dates" :key="date">
+                                                <fieldset class="nss-schedule-card">
+                                                    <legend x-text="formatDateLong(date)"></legend>
+                                                    <div class="nss-time-fields">
+                                                        <div>
+                                                            <label :for="'arrival-' + date" class="nss-label">Jam mulai</label>
+                                                            <select :id="'arrival-' + date"
+                                                                :name="'arrival_times[' + date + ']'"
+                                                                x-model="form.schedules[date].arrival_time"
+                                                                @change="if (form.booking_type === 'open_space' && form.schedules[date].departure_time && form.schedules[date].departure_time <= form.schedules[date].arrival_time) form.schedules[date].departure_time = ''"
+                                                                required class="nss-field">
+                                                                <option value="">Pilih jam</option>
+                                                                <template x-for="time in (form.booking_type === 'room' ? venueStartTimeOptions() : arrivalTimes)" :key="time">
+                                                                    <option :value="time" x-text="time"></option>
+                                                                </template>
+                                                            </select>
+                                                        </div>
+                                                        <div x-show="form.booking_type === 'open_space'">
+                                                            <label :for="'departure-' + date" class="nss-label">Jam selesai</label>
+                                                            <select :id="'departure-' + date"
+                                                                :name="'departure_times[' + date + ']'"
+                                                                x-model="form.schedules[date].departure_time"
+                                                                :disabled="form.booking_type !== 'open_space'"
+                                                                required class="nss-field">
+                                                                <option value="">Pilih jam</option>
+                                                                <template x-for="time in timeOptions" :key="time">
+                                                                    <option :value="time" :disabled="form.schedules[date].arrival_time && time <= form.schedules[date].arrival_time" x-text="time"></option>
+                                                                </template>
+                                                            </select>
+                                                        </div>
+                                                        <div x-show="form.booking_type === 'room'" x-cloak>
+                                                            <label :for="'venue-departure-' + date" class="nss-label">Jam selesai sesuai paket</label>
+                                                            <input :id="'venue-departure-' + date"
+                                                                type="text"
+                                                                :value="venueDepartureTime(date)"
+                                                                placeholder="--:--"
+                                                                readonly
+                                                                class="nss-field bg-gray-50">
+                                                            <input type="hidden"
+                                                                :name="'departure_times[' + date + ']'"
+                                                                :value="venueDepartureTime(date)"
+                                                                :disabled="form.booking_type !== 'room'">
+                                                        </div>
+                                                    </div>
+                                                </fieldset>
+                                            </template>
+                                        </div>
                                     </div>
 
-                                    <div class="nss-time-fields">
-                                        <div>
-                                            <label for="arrival_time" class="nss-label">Jam kedatangan</label>
-                                            <select id="arrival_time" name="arrival_time" x-model="form.arrival_time"
-                                                @change="if (form.departure_time && form.departure_time <= form.arrival_time) form.departure_time = ''"
-                                                required class="nss-field">
-                                            <option value="">Pilih jam</option>
-                                                <template x-for="time in arrivalTimes" :key="time">
-                                                    <option :value="time" x-text="time"></option>
-                                                </template>
-                                            </select>
-                                            @error('arrival_time')
-                                                <p class="nss-field-error">{{ $message }}</p>
-                                            @enderror
+                                    <div class="nss-attendee-panel">
+                                        <label for="visitor_count" class="nss-label">Jumlah orang</label>
+                                        <div x-show="form.booking_type === 'room' && minimumAttendees() > visitorCapacity()" x-cloak class="nss-capacity-warning" role="alert">
+                                            Venue ini belum dapat dipesan karena kapasitasnya belum memenuhi minimum <span x-text="minimumAttendees()"></span> orang. Silakan hubungi admin.
                                         </div>
-                                        <div>
-                                            <label for="departure_time" class="nss-label">Jam kepulangan</label>
-                                            <select id="departure_time" name="departure_time" x-model="form.departure_time"
-                                                required class="nss-field">
-                                                <option value="">Pilih jam</option>
-                                                <template x-for="time in timeOptions" :key="time">
-                                                    <option :value="time" :disabled="form.arrival_time && time <= form.arrival_time" x-text="time"></option>
-                                                </template>
-                                            </select>
-                                            @error('departure_time')
-                                                <p class="nss-field-error">{{ $message }}</p>
-                                            @enderror
-                                        </div>
+                                        <input
+                                            type="number"
+                                            id="visitor_count"
+                                            name="visitor_count"
+                                            :min="minimumAttendees()"
+                                            :max="visitorCapacity()"
+                                            :disabled="form.booking_type === 'room' && minimumAttendees() > visitorCapacity()"
+                                            step="1"
+                                            x-model.number="form.visitor_count"
+                                            required
+                                            class="nss-field"
+                                        >
+                                        <p class="nss-note" x-show="form.booking_type !== 'room' || minimumAttendees() <= visitorCapacity()">
+                                            Minimal <span x-text="minimumAttendees()"></span> dan maksimal
+                                            <span x-text="visitorCapacity()"></span> orang untuk tempat yang dipilih.
+                                        </p>
+                                        @error('visitor_count')
+                                            <p class="nss-field-error">{{ $message }}</p>
+                                        @enderror
                                     </div>
-                                </div>
-
-                                <div>
-                                    <label for="visitor_count" class="nss-label">Jumlah orang</label>
-                                    <input
-                                        type="number"
-                                        id="visitor_count"
-                                        name="visitor_count"
-                                        min="1"
-                                        max="{{ config('booking.open_space_capacity', 50) }}"
-                                        step="1"
-                                        x-model.number="form.visitor_count"
-                                        required
-                                        class="nss-field"
-                                    >
-                                    <p class="nss-note">Maksimal {{ config('booking.open_space_capacity', 50) }} orang.</p>
-                                    @error('visitor_count')
-                                        <p class="nss-field-error">{{ $message }}</p>
-                                    @enderror
                                 </div>
                             </div>
 
@@ -526,10 +705,24 @@
                             <!-- ============ LANGKAH 4: DATA PEMESAN ============ -->
                             <div x-show="step === 4" x-cloak class="nss-fields"
                                 x-transition:enter="nss-enter" x-transition:enter-start="nss-enter-from" x-transition:enter-end="nss-enter-to">
-                                <div><br>
+                                <div>
                                     <label for="customer_name" class="nss-label">Nama lengkap</label>
                                     <input type="text" id="customer_name" name="customer_name" x-model="form.customer_name" required
                                         autocomplete="name" class="nss-field" placeholder="Nama sesuai identitas">
+                                </div>
+                                <div x-show="form.booking_type === 'room'" x-cloak>
+                                    <label for="institution" class="nss-label">Instansi</label>
+                                    <input type="text" id="institution" name="institution"
+                                        x-model="form.institution"
+                                        :required="form.booking_type === 'room'"
+                                        maxlength="255"
+                                        autocomplete="organization"
+                                        class="nss-field"
+                                        placeholder="Nama perusahaan, komunitas, atau instansi">
+                                    <p class="nss-note">Wajib diisi untuk pemesanan venue.</p>
+                                    @error('institution')
+                                        <p class="nss-field-error">{{ $message }}</p>
+                                    @enderror
                                 </div>
                                 <div>
                                     <label for="customer_phone" class="nss-label">Nomor WhatsApp</label>
@@ -548,7 +741,7 @@
                                 </div>
 
                                 {{-- ═══ UPLOAD KTM (KHUSUS MAHASISWA) ═══ --}}
-                                <div x-show="form.category === 'mahasiswa'" x-cloak
+                                <div x-show="form.booking_type === 'open_space' && form.category === 'mahasiswa'" x-cloak
                                     x-transition:enter="nss-enter" x-transition:enter-start="nss-enter-from" x-transition:enter-end="nss-enter-to"
                                     x-data="{ ktmFileName: '' }">
 
@@ -610,8 +803,8 @@
                 <aside class="nss-bk-aside" :class="{ 'is-open': step === 2 || step === 4 }" aria-label="Ringkasan pesanan">
                     <div class="nss-pass" :class="{ 'nss-pass--tariff': step === 1 }">
                         <div class="nss-pass-body">
-                            <p class="nss-pass-title font-headline">Needs Study Space</p>
-                            <h2 class="nss-display nss-pass-name">Day pass</h2>
+                            <p class="nss-pass-title font-headline" x-text="form.booking_type === 'room' ? 'Pemesanan Venue' : 'Needs Study Space'"></p>
+                            <h2 class="nss-display nss-pass-name" x-text="form.booking_type === 'room' ? (selectedRoom()?.name || 'Pilih venue') : 'Open Space day pass'"></h2>
 
                             <dl class="nss-rows">
                                 <div class="nss-row">
@@ -620,28 +813,39 @@
                                 </div>
                                 <div class="nss-row" x-show="form.dates.length">
                                     <dt>Tanggal</dt>
-                                    <dd>
+                                    <dd class="nss-summary-dates">
                                         <template x-for="date in form.dates" :key="date">
-                                            <span class="block" x-text="formatDate(date)"></span>
+                                            <span class="nss-summary-date">
+                                                <span class="nss-summary-date-label" x-text="formatDateLong(date)"></span>
+                                                <span class="nss-summary-date-time" x-text="form.schedules[date]?.arrival_time && displayedDepartureTime(date) ? form.schedules[date].arrival_time + '–' + displayedDepartureTime(date) : ''"></span>
+                                            </span>
                                         </template>
                                     </dd>
-                                </div>
-                                <div class="nss-row" x-show="form.arrival_time && form.departure_time">
-                                    <dt>Jam</dt>
-                                    <dd x-text="form.arrival_time + '–' + form.departure_time"></dd>
                                 </div>
                             </dl>
 
                             <div class="nss-divider"></div>
 
                             <dl class="nss-rows nss-pass-breakdown" x-show="step !== 1">
-                                <div class="nss-row">
+                                <div class="nss-row" x-show="form.booking_type === 'open_space'">
                                     <dt>
-                                        Day pass
+                                        Open Space
                                         (<span x-text="form.visitor_count || 0"></span> orang ×
-                                        <span x-text="form.dates.length"></span> hari)
+                                        <span x-text="form.dates.length"></span> tanggal)
                                     </dt>
                                     <dd style="font-weight: 400;">Rp<span x-text="formatPrice(pricePerDay() * (form.visitor_count || 0) * form.dates.length)"></span></dd>
+                                </div>
+                                <div class="nss-row" x-show="form.booking_type === 'room'">
+                                    <dt>
+                                        <span x-text="selectedPackage()?.label || 'Paket venue'"></span>
+                                        · <span x-text="form.visitor_count || 0"></span> orang ×
+                                        <span x-text="form.dates.length"></span> tanggal
+                                    </dt>
+                                    <dd style="font-weight: 400;">Rp<span x-text="formatPrice(venueSubtotal())"></span></dd>
+                                </div>
+                                <div class="nss-row" x-show="form.booking_type === 'room'">
+                                    <dt>Service Charge ({{ $venueServiceChargePercent }}%)</dt>
+                                    <dd style="font-weight: 400;">Rp<span x-text="formatPrice(venueServiceCharge())"></span></dd>
                                 </div>
                                 <template x-for="item in cart()" :key="item.id">
                                     <div class="nss-row">
@@ -685,17 +889,29 @@
 </div>
 
 <script>
+@php
+    $bookingRooms = $rooms->map(fn ($room) => [
+        'id' => (string) $room->id,
+        'name' => $room->name,
+        'capacity' => (int) $room->capacity,
+        'minimum_attendees' => $room->minimumAttendees(),
+    ])->values();
+@endphp
 function bookingWizard() {
     const PRICES = { mahasiswa: 35000, umum: 55000 };
     const NAMES = { mahasiswa: 'Mahasiswa', umum: 'Umum' };
-    const TITLES = ['Pilih tarif', 'Pilih tanggal kunjungan', 'Snack dan minuman', 'Data pemesan'];
+    const VENUES = @json($bookingRooms);
+    const VENUE_PACKAGES = @json($venuePackages);
+    const VENUE_SERVICE_CHARGE_PERCENT = {{ (float) $venueServiceChargePercent }};
+    const OPEN_SPACE_CAPACITY = {{ (int) config('booking.open_space_capacity', 50) }};
+    const TITLES = ['Pilih tempat', 'Pilih tanggal dan jadwal', 'Snack dan minuman', 'Data pemesan'];
     const TIME_OPTIONS = Array.from({ length: 29 }, (_, index) => {
         const minutes = 480 + (index * 30);
         return `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
     });
     const INTROS = [
-        'Satu tarif berlaku untuk semua area di Needs Study Space.',
-        'Pilih satu atau beberapa tanggal kunjungan, lalu tentukan jam dan jumlah orang.',
+        'Pilih Open Space atau venue privat yang ingin dipesan.',
+        'Pilih tanggal, paket, dan jadwal penggunaan.',
         'Opsional. Boleh dilewati.',
         'Isi data untuk pesanan ini.'
     ];
@@ -705,8 +921,26 @@ function bookingWizard() {
     const oldCategory = @json(old('visitor_category', request('tarif', 'mahasiswa')));
     const oldDuration = parseInt(@json(old('duration', 1)), 10);
     const oldDate = @json(old('date', ''));
-    const restored = @json((bool) old('visitor_category'));
-    const timeValidationFailed = @json($errors->hasAny(['arrival_time', 'departure_time']));
+    const oldRoomId = @json((string) old('room_id', ''));
+    const oldVenuePackage = @json(old('venue_package', ''));
+    const oldArrivalTimes = @json(old('arrival_times', []));
+    const oldDepartureTimes = @json(old('departure_times', []));
+    const legacyArrivalTime = @json(old('arrival_time', ''));
+    const legacyDepartureTime = @json(old('departure_time', ''));
+    const restored = @json((bool) old('visitor_category') || (bool) old('room_id'));
+    @php
+        $timeValidationFailed = $errors->hasAny([
+            'date',
+            'dates',
+            'visitor_count',
+            'venue_package',
+            'arrival_time',
+            'departure_time',
+            'arrival_times',
+            'departure_times',
+        ]);
+    @endphp
+    const timeValidationFailed = @json($timeValidationFailed);
 
     return {
         step: timeValidationFailed ? 2 : (restored ? 4 : 1),
@@ -728,12 +962,15 @@ function bookingWizard() {
         viewMonth: new Date().getMonth(),
 
         form: {
+            booking_type: oldRoomId ? 'room' : 'open_space',
+            room_id: oldRoomId,
+            venue_package: oldVenuePackage,
             category: PRICES[oldCategory] ? oldCategory : 'mahasiswa',
             dates: @json(old('dates', [])),
-            arrival_time: @json(old('arrival_time', '')),
-            departure_time: @json(old('departure_time', '')),
+            schedules: {},
             visitor_count: @json(old('visitor_count', '')),
             customer_name: @json(old('customer_name', '')),
+            institution: @json(old('institution', '')),
             customer_phone: @json(old('customer_phone', '')),
             customer_email: @json(old('customer_email', '')),
             facility_notes: @json(old('facility_notes', '')),
@@ -755,6 +992,12 @@ function bookingWizard() {
                 }
             }
             this.form.dates = [...new Set(this.form.dates)].sort();
+            this.form.dates.forEach(date => {
+                this.form.schedules[date] = {
+                    arrival_time: oldArrivalTimes[date] || legacyArrivalTime,
+                    departure_time: oldDepartureTimes[date] || legacyDepartureTime
+                };
+            });
             if (this.form.dates.length) {
                 const [y, m] = this.form.dates[0].split('-').map(Number);
                 this.viewYear = y; this.viewMonth = m - 1;
@@ -790,7 +1033,15 @@ function bookingWizard() {
         },
 
         stepTitle() { return TITLES[this.step - 1]; },
-        stepIntro() { return INTROS[this.step - 1]; },
+        stepIntro() {
+            if (this.step === 2) {
+                return this.form.booking_type === 'room'
+                    ? 'Pilih paket sewa, tanggal, dan jam mulai untuk setiap tanggal.'
+                    : 'Pilih tanggal dan jam penggunaan untuk setiap tanggal.';
+            }
+
+            return INTROS[this.step - 1];
+        },
 
         goTo(n) {
             this.step = n;
@@ -809,7 +1060,7 @@ function bookingWizard() {
         },
         submitBooking(event) {
             const ktmInput = event.target.elements.namedItem('ktm_file');
-            if (this.form.category === 'mahasiswa' && ktmInput.files.length === 0) {
+            if (this.form.booking_type === 'open_space' && this.form.category === 'mahasiswa' && ktmInput.files.length === 0) {
                 event.preventDefault();
                 this.ktmFileError = 'Silakan pilih file KTM sebelum melanjutkan pembayaran.';
                 this.$nextTick(() => {
@@ -861,24 +1112,63 @@ function bookingWizard() {
             if (str < this.todayStr() || this.blocked.includes(str)) return;
             if (this.form.dates.includes(str)) {
                 this.form.dates = this.form.dates.filter(date => date !== str);
+                delete this.form.schedules[str];
                 return;
             }
             if (this.form.dates.length >= 30) return;
             this.form.dates = [...this.form.dates, str].sort();
+            this.form.schedules[str] = { arrival_time: '', departure_time: '' };
         },
 
+        selectedRoom() {
+            return VENUES.find(room => String(room.id) === String(this.form.room_id)) || null;
+        },
+        selectRoom(roomId) {
+            const room = VENUES.find(item => String(item.id) === String(roomId));
+            if (!room || room.capacity < room.minimum_attendees) return;
+
+            this.form.room_id = String(roomId);
+            if (this.form.visitor_count > this.visitorCapacity()) this.form.visitor_count = '';
+        },
+        selectedPackage() {
+            return VENUE_PACKAGES[this.form.venue_package] || null;
+        },
+        minimumAttendees() {
+            return this.form.booking_type === 'room'
+                ? (this.selectedRoom()?.minimum_attendees || 1)
+                : 1;
+        },
+        visitorCapacity() {
+            return this.form.booking_type === 'room'
+                ? (this.selectedRoom()?.capacity || 0)
+                : OPEN_SPACE_CAPACITY;
+        },
         firstBlockedSelectedDate() {
             return this.form.dates.find(date => this.blocked.includes(date)) || null;
         },
 
         canNext() {
-            if (this.step === 1) return !!this.form.category;
+            if (this.step === 1) {
+                return this.form.booking_type === 'open_space'
+                    ? !!this.form.category
+                    : this.form.booking_type === 'room'
+                        && !!this.selectedRoom()
+                        && this.selectedRoom().capacity >= this.selectedRoom().minimum_attendees;
+            }
             if (this.step === 2) {
                 if (!this.form.dates.length || this.form.dates.length > 30) return false;
-                if (!Number.isInteger(this.form.visitor_count) || this.form.visitor_count < 1 || this.form.visitor_count > {{ config('booking.open_space_capacity', 50) }}) return false;
-                if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(this.form.arrival_time)) return false;
-                if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(this.form.departure_time)) return false;
-                if (this.form.departure_time <= this.form.arrival_time) return false;
+                if (this.form.booking_type === 'room' && !this.selectedPackage()) return false;
+                if (this.form.booking_type === 'room' && this.minimumAttendees() > this.visitorCapacity()) return false;
+                if (!Number.isInteger(this.form.visitor_count) || this.form.visitor_count < this.minimumAttendees() || this.form.visitor_count > this.visitorCapacity()) return false;
+                if (!this.form.dates.every(date => {
+                    const schedule = this.form.schedules[date];
+                    return schedule
+                        && /^([01]\d|2[0-3]):[0-5]\d$/.test(schedule.arrival_time)
+                        && (this.form.booking_type === 'room'
+                            ? !!this.venueDepartureTime(date)
+                            : /^([01]\d|2[0-3]):[0-5]\d$/.test(schedule.departure_time)
+                                && schedule.departure_time > schedule.arrival_time);
+                })) return false;
                 if (this.firstBlockedSelectedDate()) return false;
                 return true;
             }
@@ -887,9 +1177,25 @@ function bookingWizard() {
         hint() {
             if (this.step === 2) {
                 if (!this.form.dates.length) return 'Pilih minimal satu tanggal untuk lanjut';
-                if (!Number.isInteger(this.form.visitor_count) || this.form.visitor_count < 1) return 'Masukkan jumlah orang untuk lanjut';
-                if (!this.form.arrival_time) return 'Pilih jam kedatangan untuk lanjut';
-                if (!this.form.departure_time) return 'Pilih jam kepulangan untuk lanjut';
+                if (this.form.booking_type === 'room' && !this.selectedPackage()) return 'Pilih paket sewa venue';
+                if (this.form.booking_type === 'room' && this.minimumAttendees() > this.visitorCapacity()) {
+                    return 'Venue ini belum dapat dipesan. Kapasitasnya belum memenuhi minimum pemesanan.';
+                }
+                if (!Number.isInteger(this.form.visitor_count) || this.form.visitor_count < this.minimumAttendees()) {
+                    return `Minimum pemesanan untuk tempat ini ${this.minimumAttendees()} orang`;
+                }
+                if (this.form.visitor_count > this.visitorCapacity()) {
+                    return `Maksimal pemesanan untuk tempat ini ${this.visitorCapacity()} orang`;
+                }
+                const incompleteSchedule = this.form.dates.find(date => {
+                    const schedule = this.form.schedules[date];
+                    return !schedule?.arrival_time || (this.form.booking_type === 'open_space'
+                        ? !schedule?.departure_time
+                        : !this.venueDepartureTime(date));
+                });
+                if (incompleteSchedule) return this.form.booking_type === 'room'
+                    ? 'Pilih jam mulai yang sesuai dengan durasi paket untuk setiap tanggal'
+                    : 'Pilih jam mulai dan selesai untuk setiap tanggal';
                 const bad = this.firstBlockedSelectedDate();
                 if (bad) return 'Tanggal ' + this.formatDate(bad) + ' sudah ditutup. Hapus tanggal itu atau pilih tanggal lain.';
             }
@@ -901,7 +1207,48 @@ function bookingWizard() {
         },
 
         pricePerDay() { return PRICES[this.form.category] || PRICES.mahasiswa; },
-        categoryName() { return NAMES[this.form.category] || ''; },
+        packagePricePerPerson() { return this.selectedPackage()?.price_per_person || 0; },
+        venueSubtotal() {
+            return this.packagePricePerPerson() * (this.form.visitor_count || 0) * this.form.dates.length;
+        },
+        venueServiceCharge() {
+            return Math.round(this.venueSubtotal() * VENUE_SERVICE_CHARGE_PERCENT / 100);
+        },
+        venueStartTimeOptions() {
+            const durationHours = this.selectedPackage()?.duration_hours || 0;
+            return this.arrivalTimes.filter(time => {
+                const [hours, minutes] = time.split(':').map(Number);
+                return hours * 60 + minutes + durationHours * 60 <= 22 * 60;
+            });
+        },
+        venueDepartureTime(date) {
+            const startTime = this.form.schedules[date]?.arrival_time;
+            const durationHours = this.selectedPackage()?.duration_hours;
+            if (!startTime || !durationHours) return '';
+
+            const [hours, minutes] = startTime.split(':').map(Number);
+            const endMinutes = hours * 60 + minutes + durationHours * 60;
+            if (endMinutes > 22 * 60) return '';
+
+            return `${String(Math.floor(endMinutes / 60)).padStart(2, '0')}:${String(endMinutes % 60).padStart(2, '0')}`;
+        },
+        displayedDepartureTime(date) {
+            return this.form.booking_type === 'room'
+                ? this.venueDepartureTime(date)
+                : (this.form.schedules[date]?.departure_time || '');
+        },
+        normalizeVenueStartTimes() {
+            this.form.dates.forEach(date => {
+                if (!this.venueStartTimeOptions().includes(this.form.schedules[date]?.arrival_time)) {
+                    this.form.schedules[date].arrival_time = '';
+                }
+            });
+        },
+        categoryName() {
+            return this.form.booking_type === 'room'
+                ? (this.selectedPackage()?.label || 'Pilih paket')
+                : (NAMES[this.form.category] || '');
+        },
         getQty(id) { return this.form.products[id] || 0; },
         updateProduct(id, delta) {
             const next = Math.max(0, Math.min(20, this.getQty(id) + delta));
@@ -922,7 +1269,11 @@ function bookingWizard() {
         },
 
         calculateTotal() {
-            return this.pricePerDay() * (this.form.visitor_count || 0) * this.form.dates.length
+            const basePrice = this.form.booking_type === 'room'
+                ? this.venueSubtotal() + this.venueServiceCharge()
+                : this.pricePerDay() * (this.form.visitor_count || 0) * this.form.dates.length;
+
+            return basePrice
                 + this.cart().reduce((sum, i) => sum + i.subtotal, 0);
         },
         formatPrice(price) {
@@ -932,6 +1283,12 @@ function bookingWizard() {
             if (!value) return '-';
             return new Date(value + 'T00:00:00').toLocaleDateString('id-ID', {
                 weekday: 'short', day: 'numeric', month: 'short', year: 'numeric'
+            });
+        },
+        formatDateLong(value) {
+            if (!value) return '-';
+            return new Date(value + 'T00:00:00').toLocaleDateString('id-ID', {
+                weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
             });
         }
     }

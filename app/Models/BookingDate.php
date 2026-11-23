@@ -9,7 +9,7 @@ class BookingDate extends Model
 {
     public $timestamps = false;
 
-    protected $fillable = ['date'];
+    protected $fillable = ['date', 'start_time', 'end_time'];
 
     protected function casts(): array
     {
