@@ -93,16 +93,6 @@ class BookingController extends Controller
     }
 
     //  store() — Proses Booking Baru
-
-    /**
-     * Alur:
-     * 1. Validasi input (termasuk KTM jika mahasiswa)
-     * 2. Cek tanggal diblokir dan kapasitas open space
-     * 3. Dalam satu transaksi DB: hitung harga, upload KTM, simpan booking,
-     *    items, payment, lalu buat transaksi Midtrans
-     * 4. Commit hanya jika SEMUA langkah (termasuk Midtrans) berhasil
-     * 5. Jika gagal: rollback, hapus file KTM, catat error asli ke log
-     */
     public function store(Request $request, PaymentServiceInterface $paymentService)
     {
         $request->merge([
