@@ -79,7 +79,12 @@
                             <div>
                                 <span class="text-xs text-n-gray block mb-1 font-light">Jadwal Kedatangan</span>
                                 <span class="font-medium text-n-charcoal">
-                                    {{ \Carbon\Carbon::parse($booking->booking_date)->format('d M Y') }} <span class="text-gray-300">|</span> 
+                                    @forelse($booking->bookingDates as $bookingDate)
+                                        {{ $bookingDate->date->format('d M Y') }}@unless($loop->last), @endunless
+                                    @empty
+                                        {{ \Carbon\Carbon::parse($booking->booking_date)->format('d M Y') }}
+                                    @endforelse
+                                    <span class="text-gray-300">|</span>
                                     {{ \Carbon\Carbon::parse($booking->start_time)->format('H:i') }} - 
                                     {{ \Carbon\Carbon::parse($booking->end_time)->format('H:i') }}
                                 </span>

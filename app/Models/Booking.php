@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Booking extends Model
 {
@@ -94,5 +95,10 @@ class Booking extends Model
     public function isKtmApproved(): bool
     {
         return $this->ktm_status === 'approved';
+    }
+
+    public function bookingDates(): HasMany
+    {
+        return $this->hasMany(BookingDate::class);
     }
 }

@@ -20,6 +20,11 @@
     $customerPhone = $booking->customer_phone ?? '-';
     $passType = 'Study Space Area (All-Access)';
     $orderedProducts = $booking->products ?? $booking->items ?? collect();
+    $visitDates = $booking->bookingDates->isNotEmpty()
+        ? $booking->bookingDates->map(fn ($bookingDate) => $bookingDate->date->format('Y-m-d'))->all()
+        : collect(range(0, max(0, (int) $booking->duration - 1)))
+            ->map(fn (int $offset) => \Carbon\Carbon::parse($booking->booking_date)->addDays($offset)->format('Y-m-d'))
+            ->all();
 @endphp
 
 <style>
@@ -133,8 +138,12 @@
                             <dd class="mt-1 break-words text-sm font-medium text-n-charcoal">{{ $customerPhone }}</dd>
                         </div>
                         <div class="border-t border-gray-100 py-3">
-                            <dt class="text-xs font-semibold uppercase tracking-wider text-gray-500">Tanggal</dt>
-                            <dd class="mt-1 text-sm font-medium text-n-charcoal">{{ date('d M Y', strtotime($booking->booking_date)) }}</dd>
+                            <dt class="text-xs font-semibold uppercase tracking-wider text-gray-500">Tanggal kunjungan</dt>
+                            <dd class="mt-1 space-y-1 text-sm font-medium text-n-charcoal">
+                                @foreach($visitDates as $visitDate)
+                                    <span class="block">{{ date('d M Y', strtotime($visitDate)) }}</span>
+                                @endforeach
+                            </dd>
                         </div>
                         <div class="border-t border-gray-100 py-3">
                             <dt class="text-xs font-semibold uppercase tracking-wider text-gray-500">Waktu</dt>
@@ -154,6 +163,12 @@
                             <dt class="text-xs font-semibold uppercase tracking-wider text-gray-500">Jenis akses</dt>
                             <dd class="mt-1 text-sm font-medium text-n-charcoal">{{ $passType }}</dd>
                         </div>
+                        @if($booking->facility_notes)
+                            <div class="border-t border-gray-100 py-3 sm:col-span-2">
+                                <dt class="text-xs font-semibold uppercase tracking-wider text-gray-500">Fasilitas tambahan</dt>
+                                <dd class="mt-1 whitespace-pre-line text-sm text-n-charcoal">{{ $booking->facility_notes }}</dd>
+                            </div>
+                        @endif
                     </dl>
                 </section>
 
@@ -293,8 +308,9 @@
                            "- No. WA: {$customerPhone}%0A%0A" .
                            "*INFORMASI AKSES*%0A" .
                            "- Jenis: {$passType}%0A" .
-                           "- Tanggal: " . date('d-m-Y', strtotime($booking->booking_date)) . "%0A" .
-                           "- Durasi: {$booking->duration} Hari Full-day%0A" .
+                           "- Tanggal: " . implode(', ', array_map(fn ($date) => date('d-m-Y', strtotime($date)), $visitDates)) . "%0A" .
+                           "- Durasi: " . count($visitDates) . " Hari Full-day%0A" .
+                           ($booking->facility_notes ? "- Fasilitas tambahan: {$booking->facility_notes}%0A" : '') .
                            "{$snackText}%0A" .
                            "*PEMBAYARAN*%0A" .
                            "- Total: Rp" . number_format($booking->total_price, 0, ',', '.') . "%0A" .

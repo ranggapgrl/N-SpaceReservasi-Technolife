@@ -44,41 +44,32 @@ class BookingController extends Controller
     //  checkAvailability() —
     public function checkAvailability(Request $request)
     {
-        $request->merge([
-            'visitor_count' => $request->input('visitor_count', 1),
-        ]);
-
-        $request->validate([
-            'date' => 'required|date|after_or_equal:today',
+        $validated = $request->validate([
+            'dates' => ['required_without:date', 'array', 'min:1', 'max:30'],
+            'dates.*' => ['required', 'date_format:Y-m-d', 'after_or_equal:today', 'distinct'],
+            'date' => ['required_without:dates', 'nullable', 'date_format:Y-m-d', 'after_or_equal:today'],
             'arrival_time' => 'required|date_format:H:i',
             'departure_time' => 'required|date_format:H:i|after:arrival_time',
-            'duration' => 'required|integer|min:1|max:30',
+            'duration' => ['required_without:dates', 'integer', 'min:1', 'max:30'],
             'visitor_count' => ['required', 'integer', 'min:1', 'max:'.config('booking.open_space_capacity')],
         ]);
 
-        // Cek apakah ada tanggal dalam rentang durasi yang diblokir oleh admin
-        $startDate = Carbon::parse($request->date);
-        $duration = (int) $request->duration;
+        $dates = $this->resolveBookingDates($validated);
+        $blocked = $this->findBlockedDate($dates);
 
-        for ($i = 0; $i < $duration; $i++) {
-            $checkDate = $startDate->copy()->addDays($i)->format('Y-m-d');
-            $blocked = BlockedDate::where('date', $checkDate)->first();
+        if ($blocked) {
+            $reason = $blocked->reason ? " ({$blocked->reason})" : '';
 
-            if ($blocked) {
-                $reason = $blocked->reason ? " ({$blocked->reason})" : '';
-
-                return response()->json([
-                    'available' => false,
-                    'message' => "Tanggal {$checkDate} ditutup oleh admin{$reason}. Silakan pilih tanggal lain.",
-                ]);
-            }
+            return response()->json([
+                'available' => false,
+                'message' => "Tanggal {$blocked->date->format('Y-m-d')} ditutup oleh admin{$reason}. Silakan pilih tanggal lain.",
+            ]);
         }
 
         if ($this->bookingService->hasCapacity(
-            $request->date,
+            $dates,
             $request->arrival_time.':00',
             $request->departure_time.':00',
-            (int) $request->duration,
             (int) $request->visitor_count
         )) {
             return response()->json([
@@ -95,33 +86,31 @@ class BookingController extends Controller
     //  store() — Proses Booking Baru
     public function store(Request $request, PaymentServiceInterface $paymentService)
     {
-        $request->merge([
-            'visitor_count' => $request->input('visitor_count', 1),
-        ]);
-
         // ── Validasi Input ────────────────────────────────────────────────────
-        $request->validate([
+        $validated = $request->validate([
             'visitor_category' => 'required|in:mahasiswa,umum',
             'ktm_file' => 'required_if:visitor_category,mahasiswa|nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
-            'date' => 'required|date|after_or_equal:today',
+            'dates' => ['required_without:date', 'array', 'min:1', 'max:30'],
+            'dates.*' => ['required', 'date_format:Y-m-d', 'after_or_equal:today', 'distinct'],
+            'date' => ['required_without:dates', 'nullable', 'date_format:Y-m-d', 'after_or_equal:today'],
             'arrival_time' => 'required|date_format:H:i',
             'departure_time' => 'required|date_format:H:i|after:arrival_time',
-            'duration' => 'required|integer|min:1|max:30',
+            'duration' => ['required_without:dates', 'integer', 'min:1', 'max:30'],
             'visitor_count' => ['required', 'integer', 'min:1', 'max:'.config('booking.open_space_capacity')],
             'customer_name' => 'required|string|max:255',
             'customer_phone' => 'required|string|max:20',
             'products' => 'nullable|array',
             'customer_email' => 'required|email:rfc|max:255',
+            'facility_notes' => 'nullable|string|max:1000',
         ]);
 
-        $startDate = Carbon::parse($request->date);
-        $duration = (int) $request->duration;
+        $dates = $this->resolveBookingDates($validated);
+        $firstDate = $dates[0];
+        $duration = count($dates);
+        $blocked = $this->findBlockedDate($dates);
 
-        for ($i = 0; $i < $duration; $i++) {
-            $checkDate = $startDate->copy()->addDays($i)->format('Y-m-d');
-            if (BlockedDate::where('date', $checkDate)->exists()) {
-                return back()->withInput()->with('error', "Tanggal {$checkDate} dalam rentang pilihan Anda telah ditutup oleh admin. Silakan pilih tanggal lain.");
-            }
+        if ($blocked) {
+            return back()->withInput()->with('error', "Tanggal {$blocked->date->format('Y-m-d')} ditutup oleh admin. Silakan pilih tanggal lain.");
         }
 
         // Path KTM disimpan di luar try supaya bisa dihapus jika terjadi rollback
@@ -130,22 +119,20 @@ class BookingController extends Controller
         try {
             DB::beginTransaction();
 
-            $this->bookingService->lockCapacityDates($request->date, $duration);
+            $this->bookingService->lockCapacityDates($dates);
 
-            for ($i = 0; $i < $duration; $i++) {
-                $checkDate = $startDate->copy()->addDays($i)->format('Y-m-d');
-                if (BlockedDate::where('date', $checkDate)->exists()) {
-                    DB::rollBack();
+            $blocked = $this->findBlockedDate($dates);
 
-                    return back()->withInput()->with('error', "Tanggal {$checkDate} dalam rentang pilihan Anda telah ditutup oleh admin. Silakan pilih tanggal lain.");
-                }
+            if ($blocked) {
+                DB::rollBack();
+
+                return back()->withInput()->with('error', "Tanggal {$blocked->date->format('Y-m-d')} ditutup oleh admin. Silakan pilih tanggal lain.");
             }
 
             if (! $this->bookingService->hasCapacity(
-                $request->date,
+                $dates,
                 $request->arrival_time.':00',
                 $request->departure_time.':00',
-                $duration,
                 (int) $request->visitor_count
             )) {
                 DB::rollBack();
@@ -155,7 +142,7 @@ class BookingController extends Controller
 
             // ── Hitung Harga ──────────────────────────────────────────────────
             $pricePerDay = $request->visitor_category === 'mahasiswa' ? 35000 : 55000;
-            $dayPassPrice = $pricePerDay * $request->duration;
+            $dayPassPrice = $pricePerDay * $duration * (int) $validated['visitor_count'];
             $productTotal = 0;
 
             // ── Kalkulasi Item Produk Tambahan ────────────────────────────────
@@ -198,11 +185,12 @@ class BookingController extends Controller
                 'booking_code' => $bookingCode,
                 'customer_name' => $request->customer_name,
                 'customer_phone' => $request->customer_phone,
-                'booking_date' => $request->date,
+                'booking_date' => $firstDate,
                 'start_time' => $request->arrival_time.':00',
                 'end_time' => $request->departure_time.':00',
-                'duration' => $request->duration,
+                'duration' => $duration,
                 'visitor_count' => $request->visitor_count,
+                'facility_notes' => $request->input('facility_notes'),
                 'day_pass_price' => $dayPassPrice,
                 'product_total' => $productTotal,
                 'total_price' => $totalPrice,
@@ -212,6 +200,11 @@ class BookingController extends Controller
                 'ktm_status' => $ktmStatus,
                 'customer_email' => $request->customer_email,
             ]);
+
+            // Simpan tanggal pilihan satu per satu, bukan sebagai rentang berurutan.
+            $booking->bookingDates()->createMany(
+                array_map(fn (string $date): array => ['date' => $date], $dates)
+            );
 
             // ── Simpan Item Produk ─────────────────────────────────────────────
             foreach ($itemsToAttach as $item) {
@@ -278,7 +271,7 @@ class BookingController extends Controller
      */
     public function success($bookingCode, PaymentServiceInterface $paymentService)
     {
-        $booking = Booking::with(['items.product', 'payment'])
+        $booking = Booking::with(['items.product', 'payment', 'bookingDates'])
             ->where('booking_code', $bookingCode)
             ->orWhere('id', $bookingCode)
             ->firstOrFail();
@@ -321,6 +314,36 @@ class BookingController extends Controller
         return view('booking.success', compact('booking'));
     }
 
+    /**
+     * Mendukung daftar tanggal baru sekaligus format date/duration booking lama.
+     */
+    private function resolveBookingDates(array $validated): array
+    {
+        if (! empty($validated['dates'])) {
+            return collect($validated['dates'])
+                ->map(fn (string $date): string => Carbon::parse($date)->toDateString())
+                ->unique()
+                ->sort()
+                ->values()
+                ->all();
+        }
+
+        $startDate = Carbon::parse($validated['date']);
+
+        return collect(range(0, (int) $validated['duration'] - 1))
+            ->map(fn (int $offset): string => $startDate->copy()->addDays($offset)->toDateString())
+            ->all();
+    }
+
+    private function findBlockedDate(array $dates): ?BlockedDate
+    {
+        return BlockedDate::where(function ($query) use ($dates): void {
+            foreach ($dates as $date) {
+                $query->orWhereDate('date', $date);
+            }
+        })->first();
+    }
+
     // ═══════════════════════════════════════════════
     //  checkStatus() — Cek Status Booking (Tanpa Login)
     // ═══════════════════════════════════════════════
@@ -336,7 +359,7 @@ class BookingController extends Controller
         $keyword = $request->input('keyword');
 
         if ($keyword) {
-            $bookings = Booking::with('payment')
+            $bookings = Booking::with(['payment', 'bookingDates'])
                 ->where('booking_code', 'LIKE', "%{$keyword}%")
                 ->orWhere('customer_phone', 'LIKE', "%{$keyword}%")
                 ->orderBy('created_at', 'desc')
@@ -350,7 +373,7 @@ class BookingController extends Controller
             Cookie::queue('nss_booking_history', json_encode($cookieHistory), 3);
 
         } elseif (! empty($cookieHistory)) {
-            $bookings = Booking::with('payment')
+            $bookings = Booking::with(['payment', 'bookingDates'])
                 ->whereIn('booking_code', $cookieHistory)
                 ->orderBy('created_at', 'desc')
                 ->get();

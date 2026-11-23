@@ -109,8 +109,14 @@
                         <h2 class="mb-4 text-base font-semibold text-n-charcoal">Jadwal penggunaan</h2>
                         <dl class="grid grid-cols-2 gap-4">
                             <div>
-                                <dt class="mb-1 text-xs text-n-gray">Tanggal</dt>
-                                <dd class="text-sm font-semibold">{{ \Carbon\Carbon::parse($booking->booking_date)->isoFormat('D MMMM Y') }}</dd>
+                                <dt class="mb-1 text-xs text-n-gray">Tanggal kunjungan</dt>
+                                <dd class="space-y-1 text-sm font-semibold">
+                                    @forelse($booking->bookingDates as $bookingDate)
+                                        <span class="block">{{ $bookingDate->date->isoFormat('D MMMM Y') }}</span>
+                                    @empty
+                                        <span>{{ \Carbon\Carbon::parse($booking->booking_date)->isoFormat('D MMMM Y') }}</span>
+                                    @endforelse
+                                </dd>
                             </div>
                             <div>
                                 <dt class="mb-1 text-xs text-n-gray">Durasi</dt>
@@ -126,6 +132,12 @@
                                 <dd class="text-sm font-semibold tabular-nums">{{ \Carbon\Carbon::parse($booking->end_time)->format('H:i') }}</dd>
                             </div>
                         </dl>
+                        @if($booking->facility_notes)
+                            <div class="mt-4 border-t border-n-border pt-4">
+                                <dt class="mb-1 text-xs text-n-gray">Fasilitas tambahan</dt>
+                                <dd class="whitespace-pre-line text-sm font-medium">{{ $booking->facility_notes }}</dd>
+                            </div>
+                        @endif
                     </div>
                 </div>
 
@@ -382,13 +394,17 @@
                         // Format nomor telepon untuk WhatsApp: ganti awalan 0 dengan 62
                         $waNumber = ltrim($booking->customer_phone, '0');
                         if (!str_starts_with($waNumber, '62')) $waNumber = '62' . $waNumber;
+                        $bookingDateLabels = $booking->bookingDates->isNotEmpty()
+                            ? $booking->bookingDates->map(fn ($bookingDate) => $bookingDate->date->isoFormat('D MMMM Y'))->implode(', ')
+                            : \Carbon\Carbon::parse($booking->booking_date)->isoFormat('D MMMM Y');
 
                         // Pesan konfirmasi otomatis dengan data booking
                         $waMessage = urlencode(
                             "Halo {$booking->customer_name}, konfirmasi reservasi N-Space Anda:\n\n" .
                             "📋 Kode: {$booking->booking_code}\n" .
-                            "📅 Tanggal: " . \Carbon\Carbon::parse($booking->booking_date)->isoFormat('D MMMM Y') . "\n" .
-                            "⏱ Durasi: {$booking->duration} hari\n" .
+                            "📅 Tanggal: {$bookingDateLabels}\n" .
+                            "⏱ Durasi: " . ($booking->bookingDates->isNotEmpty() ? $booking->bookingDates->count() : $booking->duration) . " hari\n" .
+                            ($booking->facility_notes ? "🪑 Fasilitas tambahan: {$booking->facility_notes}\n" : '') .
                             "💳 Total: Rp" . number_format($booking->total_price, 0, ',', '.') . "\n" .
                             "✅ Status: " . ucfirst($booking->status)
                         );

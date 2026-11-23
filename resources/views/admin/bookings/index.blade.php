@@ -155,8 +155,12 @@
                                 {{ $booking->visitor_category === 'mahasiswa' ? 'Mahasiswa' : 'Umum' }}
                             </td>
                             <td class="px-4 py-4">
-                                <p>{{ \Carbon\Carbon::parse($booking->booking_date)->format('d M Y') }}</p>
-                                <p class="text-xs text-n-gray">{{ $booking->duration }} hari</p>
+                                @forelse($booking->bookingDates as $bookingDate)
+                                    <p>{{ $bookingDate->date->format('d M Y') }}</p>
+                                @empty
+                                    <p>{{ \Carbon\Carbon::parse($booking->booking_date)->format('d M Y') }}</p>
+                                @endforelse
+                                <p class="text-xs text-n-gray">{{ $booking->bookingDates->isNotEmpty() ? $booking->bookingDates->count() : $booking->duration }} hari</p>
                             </td>
                             <td class="px-4 py-4 text-right font-medium tabular-nums">Rp{{ number_format($booking->total_price, 0, ',', '.') }}</td>
                             <td class="px-4 py-4">

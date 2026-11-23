@@ -28,7 +28,7 @@ class BookingController extends Controller
         $ktmFilter = $request->get('ktm'); // Filter status KTM (baru)
 
         // Mulai query dengan eager load relasi items dan product (room dihapus)
-        $query = Booking::with(['items.product'])->latest();
+        $query = Booking::with(['items.product', 'bookingDates'])->latest();
 
         // ── Filter berdasarkan status booking ───────────────────────────────
         if ($status) {
@@ -73,7 +73,7 @@ class BookingController extends Controller
     public function show(Booking $booking)
     {
         // Load semua relasi yang diperlukan sekaligus (eager loading, room dihapus)
-        $booking->load(['items.product', 'payment']);
+        $booking->load(['items.product', 'payment', 'bookingDates']);
 
         return view('admin.bookings.show', compact('booking'));
     }

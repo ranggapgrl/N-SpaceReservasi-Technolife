@@ -11,10 +11,13 @@ class BookingService
     /**
      * Lock all calendar days in a booking so concurrent requests cannot oversell seats.
      */
-    public function lockCapacityDates(string $date, int $duration): void
+    public function lockCapacityDates(array $dates): void
     {
-        $dates = collect(range(0, $duration - 1))
-            ->map(fn (int $offset): string => Carbon::parse($date)->addDays($offset)->toDateString());
+        $dates = collect($dates)
+            ->map(fn (string $date): string => Carbon::parse($date)->toDateString())
+            ->unique()
+            ->sort()
+            ->values();
 
         DB::table('booking_capacity_locks')->insertOrIgnore(
             $dates->map(fn (string $bookingDate): array => ['booking_date' => $bookingDate])->all()
@@ -31,33 +34,65 @@ class BookingService
      * Determine whether a booking fits within the shared open-space capacity.
      */
     public function hasCapacity(
-        string $date,
+        array $dates,
         string $startTime,
         string $endTime,
-        int $duration,
         int $visitorCount
     ): bool {
         $capacity = (int) config('booking.open_space_capacity');
+
         if ($visitorCount > $capacity) {
             return false;
         }
 
-        $startDate = Carbon::parse($date);
-        $endDate = $startDate->copy()->addDays($duration - 1);
-        $existingBookings = Booking::query()
-            ->whereBetween('booking_date', [$startDate->copy()->subDays(29)->toDateString(), $endDate->toDateString()])
-            ->whereIn('status', ['pending', 'confirmed'])
-            ->get(['booking_date', 'start_time', 'end_time', 'duration', 'visitor_count']);
+        $dates = collect($dates)
+            ->map(fn (string $date): string => Carbon::parse($date)->toDateString())
+            ->unique()
+            ->sort()
+            ->values();
 
-        for ($offset = 0; $offset < $duration; $offset++) {
-            $currentDate = $startDate->copy()->addDays($offset);
+        if ($dates->isEmpty()) {
+            return false;
+        }
+
+        $firstDate = Carbon::parse($dates->first());
+        $lastDate = Carbon::parse($dates->last());
+        $existingBookings = Booking::query()
+            ->whereIn('status', ['pending', 'confirmed'])
+            ->where(function ($query) use ($dates, $firstDate, $lastDate): void {
+                $query->whereHas('bookingDates', function ($dateQuery) use ($dates): void {
+                    $dateQuery->where(function ($selectedDatesQuery) use ($dates): void {
+                        foreach ($dates as $date) {
+                            $selectedDatesQuery->orWhereDate('date', $date);
+                        }
+                    });
+                })->orWhere(function ($legacyQuery) use ($firstDate, $lastDate): void {
+                    $legacyQuery->whereDoesntHave('bookingDates')
+                        ->whereBetween('booking_date', [
+                            $firstDate->copy()->subDays(29)->toDateString(),
+                            $lastDate->toDateString(),
+                        ]);
+                });
+            })
+            ->with('bookingDates')
+            ->get(['id', 'booking_date', 'start_time', 'end_time', 'duration', 'visitor_count']);
+
+        foreach ($dates as $date) {
             $occupiedVisitors = 0;
 
             foreach ($existingBookings as $booking) {
-                $bookingStart = Carbon::parse($booking->booking_date);
-                $bookingEnd = $bookingStart->copy()->addDays(max(0, (int) $booking->duration - 1));
+                if ($booking->bookingDates->isNotEmpty()) {
+                    $includesDate = $booking->bookingDates->contains(
+                        fn ($bookingDate): bool => $bookingDate->date->toDateString() === $date
+                    );
+                } else {
+                    $bookingStart = Carbon::parse($booking->booking_date);
+                    $bookingEnd = $bookingStart->copy()->addDays(max(0, (int) $booking->duration - 1));
+                    $currentDate = Carbon::parse($date);
+                    $includesDate = $currentDate->gte($bookingStart) && $currentDate->lte($bookingEnd);
+                }
 
-                if ($currentDate->lt($bookingStart) || $currentDate->gt($bookingEnd)) {
+                if (! $includesDate) {
                     continue;
                 }
 

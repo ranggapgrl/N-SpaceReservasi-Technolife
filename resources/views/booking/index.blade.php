@@ -290,8 +290,6 @@
 
                                 <!-- Diubah menjadi statis open-space -->
                                 <input type="hidden" name="room_type" value="open-space">
-                                <input type="hidden" name="visitor_count" value="{{ old('visitor_count', 1) }}">
-
                                 <fieldset style="border:0;margin:0;padding:0;min-width:0">
                                     <legend class="nss-radio">Pilih tarif</legend>
                                     <div class="nss-tarifs">
@@ -346,13 +344,17 @@
                                 </section>
                             </div>
 
-                            <!-- ============ LANGKAH 2: TANGGAL & DURASI ============ -->
+                            <!-- ============ LANGKAH 2: TANGGAL, JAM, DAN JUMLAH ORANG ============ -->
                             <div x-show="step === 2" x-cloak class="nss-grid2"
                                 x-transition:enter="nss-enter" x-transition:enter-start="nss-enter-from" x-transition:enter-end="nss-enter-to">
 
                                 <div>
-                                    <span class="nss-label">Tanggal mulai</span>
-                                    <input type="hidden" name="date" :value="form.date">
+                                    <span class="nss-label">Pilih tanggal kunjungan</span>
+                                    <input type="hidden" name="date" :value="form.dates[0] || ''">
+                                    <input type="hidden" name="duration" :value="form.dates.length">
+                                    <template x-for="date in form.dates" :key="date">
+                                        <input type="hidden" name="dates[]" :value="date">
+                                    </template>
 
                                     <div class="nss-cal">
                                         <div class="nss-cal-head">
@@ -371,14 +373,13 @@
                                             <template x-for="(cell, i) in calendarCells()" :key="i">
                                                 <button type="button" class="nss-day"
                                                         :class="cell ? {
-                                                            'is-selected': cell.str === form.date,
-                                                            'is-range': inRange(cell.str),
+                                                            'is-selected': form.dates.includes(cell.str),
                                                             'is-past': cell.past,
                                                             'is-blocked': cell.blocked
                                                         } : {}"
                                                         :disabled="!cell || cell.disabled"
                                                         :title="cell && cell.blocked ? 'Ditutup / penuh' : ''"
-                                                        @click="cell && pickDate(cell.str)"
+                                                        @click="cell && toggleDate(cell.str)"
                                                         x-text="cell ? cell.day : ''"></button>
                                             </template>
                                         </div>
@@ -386,6 +387,18 @@
                                         <div class="nss-cal-legend">
                                             <span><i></i>Ditutup / penuh</span>
                                         </div>
+                                    </div>
+
+                                    <div class="nss-note" aria-live="polite">
+                                        <span x-text="form.dates.length"></span> tanggal dipilih
+                                        <ul class="mt-2 space-y-1" x-show="form.dates.length">
+                                            <template x-for="date in form.dates" :key="date">
+                                                <li class="flex items-center justify-between gap-2">
+                                                    <span x-text="formatDate(date)"></span>
+                                                    <button type="button" class="nss-small" @click="toggleDate(date)">Hapus</button>
+                                                </li>
+                                            </template>
+                                        </ul>
                                     </div>
 
                                     <div class="nss-time-fields">
@@ -420,22 +433,22 @@
                                 </div>
 
                                 <div>
-                                    <span class="nss-label">Durasi</span>
-                                    <div class="nss-stepper">
-                                        <button type="button" @click="changeDuration(-1)" :disabled="form.duration <= 1" aria-label="Kurangi satu hari">
-                                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2.5" d="M5 12h14"/></svg>
-                                        </button>
-                                        <div class="nss-stepper-val">
-                                            <input type="text" inputmode="numeric" name="duration" :value="form.duration" readonly aria-label="Jumlah hari" class="nss-num">
-                                            <span class="nss-small nss-muted">hari</span>
-                                        </div>
-                                        <button type="button" @click="changeDuration(1)" :disabled="form.duration >= 30" aria-label="Tambah satu hari">
-                                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2.5" d="M12 5v14M5 12h14"/></svg>
-                                        </button>
-                                    </div>
-                                    <p class="nss-note" x-show="form.date && form.duration > 1" x-transition.opacity>
-                                        Berlaku sampai <span x-text="formatDate(endDate())"></span>
-                                    </p>
+                                    <label for="visitor_count" class="nss-label">Jumlah orang</label>
+                                    <input
+                                        type="number"
+                                        id="visitor_count"
+                                        name="visitor_count"
+                                        min="1"
+                                        max="{{ config('booking.open_space_capacity', 50) }}"
+                                        step="1"
+                                        x-model.number="form.visitor_count"
+                                        required
+                                        class="nss-field"
+                                    >
+                                    <p class="nss-note">Maksimal {{ config('booking.open_space_capacity', 50) }} orang.</p>
+                                    @error('visitor_count')
+                                        <p class="nss-field-error">{{ $message }}</p>
+                                    @enderror
                                 </div>
                             </div>
 
@@ -493,6 +506,21 @@
                                     <li class="nss-muted">Belum ada snack atau minuman yang tersedia.</li>
                                     @endforelse
                                 </ul>
+                                <div class="mt-6">
+                                    <label for="facility_notes" class="nss-label">Fasilitas tambahan (opsional)</label>
+                                    <textarea
+                                        id="facility_notes"
+                                        name="facility_notes"
+                                        x-model="form.facility_notes"
+                                        maxlength="1000"
+                                        rows="3"
+                                        class="nss-field"
+                                        placeholder="Tuliskan fasilitas tambahan yang Anda perlukan"
+                                    >{{ old('facility_notes') }}</textarea>
+                                    @error('facility_notes')
+                                        <p class="nss-field-error">{{ $message }}</p>
+                                    @enderror
+                                </div>
                             </div>
 
                             <!-- ============ LANGKAH 4: DATA PEMESAN ============ -->
@@ -590,9 +618,13 @@
                                     <dt>Tarif</dt>
                                     <dd x-text="categoryName()"></dd>
                                 </div>
-                                <div class="nss-row" x-show="form.date">
-                                    <dt>Mulai</dt>
-                                    <dd x-text="formatDate(form.date)"></dd>
+                                <div class="nss-row" x-show="form.dates.length">
+                                    <dt>Tanggal</dt>
+                                    <dd>
+                                        <template x-for="date in form.dates" :key="date">
+                                            <span class="block" x-text="formatDate(date)"></span>
+                                        </template>
+                                    </dd>
                                 </div>
                                 <div class="nss-row" x-show="form.arrival_time && form.departure_time">
                                     <dt>Jam</dt>
@@ -604,8 +636,12 @@
 
                             <dl class="nss-rows nss-pass-breakdown" x-show="step !== 1">
                                 <div class="nss-row">
-                                    <dt>Sewa <span x-text="form.duration"></span> hari</dt>
-                                    <dd style="font-weight: 400;">Rp<span x-text="formatPrice(pricePerDay() * form.duration)"></span></dd>
+                                    <dt>
+                                        Day pass
+                                        (<span x-text="form.visitor_count || 0"></span> orang ×
+                                        <span x-text="form.dates.length"></span> hari)
+                                    </dt>
+                                    <dd style="font-weight: 400;">Rp<span x-text="formatPrice(pricePerDay() * (form.visitor_count || 0) * form.dates.length)"></span></dd>
                                 </div>
                                 <template x-for="item in cart()" :key="item.id">
                                     <div class="nss-row">
@@ -652,14 +688,14 @@
 function bookingWizard() {
     const PRICES = { mahasiswa: 35000, umum: 55000 };
     const NAMES = { mahasiswa: 'Mahasiswa', umum: 'Umum' };
-    const TITLES = ['Pilih tarif', 'Tanggal dan durasi', 'Snack dan minuman', 'Data pemesan'];
+    const TITLES = ['Pilih tarif', 'Pilih tanggal kunjungan', 'Snack dan minuman', 'Data pemesan'];
     const TIME_OPTIONS = Array.from({ length: 29 }, (_, index) => {
         const minutes = 480 + (index * 30);
         return `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
     });
     const INTROS = [
         'Satu tarif berlaku untuk semua area di Needs Study Space.',
-        'Tentukan tanggal mulai dan berapa hari kamu datang.',
+        'Pilih satu atau beberapa tanggal kunjungan, lalu tentukan jam dan jumlah orang.',
         'Opsional. Boleh dilewati.',
         'Isi data untuk pesanan ini.'
     ];
@@ -668,6 +704,7 @@ function bookingWizard() {
     const oldProducts = @json(old('products', []));
     const oldCategory = @json(old('visitor_category', request('tarif', 'mahasiswa')));
     const oldDuration = parseInt(@json(old('duration', 1)), 10);
+    const oldDate = @json(old('date', ''));
     const restored = @json((bool) old('visitor_category'));
     const timeValidationFailed = @json($errors->hasAny(['arrival_time', 'departure_time']));
 
@@ -692,13 +729,14 @@ function bookingWizard() {
 
         form: {
             category: PRICES[oldCategory] ? oldCategory : 'mahasiswa',
-            date: @json(old('date', '')),
+            dates: @json(old('dates', [])),
             arrival_time: @json(old('arrival_time', '')),
             departure_time: @json(old('departure_time', '')),
-            duration: oldDuration >= 1 && oldDuration <= 30 ? oldDuration : 1,
+            visitor_count: @json(old('visitor_count', '')),
             customer_name: @json(old('customer_name', '')),
             customer_phone: @json(old('customer_phone', '')),
             customer_email: @json(old('customer_email', '')),
+            facility_notes: @json(old('facility_notes', '')),
             products: {}
         },
 
@@ -706,8 +744,19 @@ function bookingWizard() {
             // Normalisasi: ambil 10 karakter pertama (YYYY-MM-DD), jaga-jaga kalau formatnya datetime
             this.blocked = JSON.parse(document.getElementById('booking-wizard').dataset.blocked || '[]')
                 .map(d => String(d).slice(0, 10));
-            if (this.form.date) {
-                const [y, m] = this.form.date.split('-').map(Number);
+            if (!Array.isArray(this.form.dates)) this.form.dates = [];
+            if (this.form.dates.length === 0 && oldDate) {
+                const startDate = new Date(oldDate + 'T00:00:00');
+                const count = Number.isInteger(oldDuration) && oldDuration > 0 && oldDuration <= 30 ? oldDuration : 1;
+                for (let offset = 0; offset < count; offset++) {
+                    const date = new Date(startDate);
+                    date.setDate(startDate.getDate() + offset);
+                    this.form.dates.push(this.toStr(date));
+                }
+            }
+            this.form.dates = [...new Set(this.form.dates)].sort();
+            if (this.form.dates.length) {
+                const [y, m] = this.form.dates[0].split('-').map(Number);
                 this.viewYear = y; this.viewMonth = m - 1;
             }
 
@@ -808,49 +857,41 @@ function bookingWizard() {
             }
             return cells;
         },
-        pickDate(str) { this.form.date = str; },
-
-        // Menyorot rentang hari sesuai durasi
-        inRange(str) {
-            if (!this.form.date || str === this.form.date) return false;
-            return str > this.form.date && str <= this.endDate();
-        },
-
-        // Cek apakah rentang (tanggal mulai + durasi) menabrak tanggal yang ditutup
-        checkBlockedSelection() {
-            return this.firstBlockedInRange() !== null;
-        },
-        firstBlockedInRange() {
-            if (!this.form.date) return null;
-            const start = new Date(this.form.date + 'T00:00:00');
-            for (let i = 0; i < this.form.duration; i++) {
-                const d = new Date(start);
-                d.setDate(start.getDate() + i);
-                const str = this.toStr(d);
-                if (this.blocked.includes(str)) return str;
+        toggleDate(str) {
+            if (str < this.todayStr() || this.blocked.includes(str)) return;
+            if (this.form.dates.includes(str)) {
+                this.form.dates = this.form.dates.filter(date => date !== str);
+                return;
             }
-            return null;
+            if (this.form.dates.length >= 30) return;
+            this.form.dates = [...this.form.dates, str].sort();
+        },
+
+        firstBlockedSelectedDate() {
+            return this.form.dates.find(date => this.blocked.includes(date)) || null;
         },
 
         canNext() {
             if (this.step === 1) return !!this.form.category;
             if (this.step === 2) {
-                if (!this.form.date) return false;
+                if (!this.form.dates.length || this.form.dates.length > 30) return false;
+                if (!Number.isInteger(this.form.visitor_count) || this.form.visitor_count < 1 || this.form.visitor_count > {{ config('booking.open_space_capacity', 50) }}) return false;
                 if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(this.form.arrival_time)) return false;
                 if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(this.form.departure_time)) return false;
                 if (this.form.departure_time <= this.form.arrival_time) return false;
-                if (this.checkBlockedSelection()) return false;
+                if (this.firstBlockedSelectedDate()) return false;
                 return true;
             }
             return true;
         },
         hint() {
             if (this.step === 2) {
-                if (!this.form.date) return 'Pilih tanggal mulai untuk lanjut';
+                if (!this.form.dates.length) return 'Pilih minimal satu tanggal untuk lanjut';
+                if (!Number.isInteger(this.form.visitor_count) || this.form.visitor_count < 1) return 'Masukkan jumlah orang untuk lanjut';
                 if (!this.form.arrival_time) return 'Pilih jam kedatangan untuk lanjut';
                 if (!this.form.departure_time) return 'Pilih jam kepulangan untuk lanjut';
-                const bad = this.firstBlockedInRange();
-                if (bad) return '⚠️ Tanggal ' + this.formatDate(bad) + ' sudah ditutup. Kurangi durasi atau ganti tanggal mulai.';
+                const bad = this.firstBlockedSelectedDate();
+                if (bad) return 'Tanggal ' + this.formatDate(bad) + ' sudah ditutup. Hapus tanggal itu atau pilih tanggal lain.';
             }
             return '';
         },
@@ -861,17 +902,6 @@ function bookingWizard() {
 
         pricePerDay() { return PRICES[this.form.category] || PRICES.mahasiswa; },
         categoryName() { return NAMES[this.form.category] || ''; },
-        changeDuration(delta) {
-            const next = this.form.duration + delta;
-            if (next >= 1 && next <= 30) this.form.duration = next;
-        },
-        endDate() {
-            if (!this.form.date) return '';
-            const d = new Date(this.form.date + 'T00:00:00');
-            d.setDate(d.getDate() + this.form.duration - 1);
-            return this.toStr(d);
-        },
-
         getQty(id) { return this.form.products[id] || 0; },
         updateProduct(id, delta) {
             const next = Math.max(0, Math.min(20, this.getQty(id) + delta));
@@ -892,7 +922,7 @@ function bookingWizard() {
         },
 
         calculateTotal() {
-            return this.pricePerDay() * this.form.duration
+            return this.pricePerDay() * (this.form.visitor_count || 0) * this.form.dates.length
                 + this.cart().reduce((sum, i) => sum + i.subtotal, 0);
         },
         formatPrice(price) {

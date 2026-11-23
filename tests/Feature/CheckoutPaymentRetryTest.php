@@ -62,7 +62,7 @@ class CheckoutPaymentRetryTest extends TestCase
 
         $response->assertOk()
             ->assertSee('Bayar Lagi lewat Midtrans')
-            ->assertSee('24 jam');
+            ->assertSee('30 menit');
     }
 
     public function test_pending_payment_invoice_shows_a_live_expiration_countdown(): void
