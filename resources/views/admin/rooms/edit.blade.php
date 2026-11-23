@@ -85,13 +85,13 @@
                 </div>
 
                 {{-- Submit --}}
-                <div class="flex items-center space-x-3 pt-2">
+                <div class="flex flex-col gap-3 pt-2 sm:flex-row sm:items-center">
                     <button type="submit"
-                            class="bg-n-primary text-white px-6 py-2.5 rounded-xl text-sm font-semibold hover:bg-n-primary/90 transition-colors">
+                            class="inline-flex w-full items-center justify-center bg-n-primary px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-n-primary/90 sm:w-auto">
                         Perbarui Ruangan
                     </button>
                     <a href="{{ route('admin.rooms.index') }}"
-                    class="px-6 py-2.5 rounded-xl text-sm font-medium border border-n-border text-n-gray hover:bg-n-bg transition-colors">
+                    class="inline-flex w-full items-center justify-center rounded-xl border border-n-border px-6 py-2.5 text-center text-sm font-medium text-n-gray transition-colors hover:bg-n-bg sm:w-auto">
                         Batal
                     </a>
                 </div>

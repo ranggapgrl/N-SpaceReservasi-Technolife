@@ -12,10 +12,10 @@
         <div role="status" class="mb-4 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">{{ session('success') }}</div>
     @endif
 
-    <div class="flex items-center justify-between mb-6">
+    <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p class="text-n-gray text-sm">Total {{ $rooms->total() }} ruangan</p>
         <a href="{{ route('admin.rooms.create') }}"
-           class="inline-flex items-center text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors hover:opacity-90"
+           class="inline-flex w-full items-center justify-center rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:opacity-90 sm:w-auto"
            style="background-color: #b1002c;">
             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>

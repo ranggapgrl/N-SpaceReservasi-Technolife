@@ -50,5 +50,7 @@ class DatabaseSeeder extends Seeder
                 'is_active' => true,
             ]
         );
+
+        $this->call(RoomCatalogSeeder::class);
     }
 }

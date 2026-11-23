@@ -379,7 +379,7 @@
                             </div>
 
                             @if($monthDateClosed && $monthDateReason)
-                               <p class="mt-3 text-sm text-rose-800">Alasan: {{ $monthDateReason }}</p>
+                               <p class="mt-3 break-words text-sm text-rose-800">Alasan: {{ $monthDateReason }}</p>
                             @endif
 
                             <p class="mt-3 text-sm text-gray-600">

@@ -4,10 +4,10 @@
 
 @section('content')
 
-    <div class="flex items-center justify-between mb-6">
+    <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p class="text-n-gray text-sm">Total {{ $products->count() }} produk</p>
         <a href="{{ route('admin.products.create') }}"
-        class="inline-flex items-center text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors hover:opacity-90" style="background-color: #b1002c;">
+        class="inline-flex w-full items-center justify-center rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:opacity-90 sm:w-auto" style="background-color: #b1002c;">
             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
             </svg>

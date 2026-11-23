@@ -60,8 +60,8 @@
         </div>
 
         @forelse($blockedDates as $bd)
-        <div class="flex items-center justify-between px-6 py-4 border-b border-n-border/40 last:border-0 hover:bg-gray-50/50">
-            <div>
+        <div class="flex flex-col gap-3 px-6 py-4 border-b border-n-border/40 last:border-0 hover:bg-gray-50/50 sm:flex-row sm:items-center sm:justify-between">
+            <div class="min-w-0">
                 {{-- Format tanggal yang mudah dibaca: 13 Oktober 2026 --}}
                 <p class="font-semibold text-n-charcoal text-sm">
                     {{ $bd->date->isoFormat('D MMMM Y') }}
@@ -70,7 +70,7 @@
                         <span class="ml-2 text-xs text-n-gray font-normal">(sudah lewat)</span>
                     @endif
                 </p>
-                <p class="text-xs text-n-gray mt-0.5">{{ $bd->reason ?? 'Tidak ada alasan' }}</p>
+                <p class="mt-0.5 break-words text-xs text-n-gray">{{ $bd->reason ?? 'Tidak ada alasan' }}</p>
             </div>
             {{--
                 DELETE: Membuka kembali tanggal.
@@ -82,7 +82,7 @@
                 @method('DELETE')
                 <button type="submit"
                         onclick="return confirm('Buka kembali tanggal ini?')"
-                        class="text-xs text-red-500 hover:text-red-700 font-medium px-3 py-1.5 border border-red-200 rounded-lg hover:bg-red-50 transition-colors">
+                        class="shrink-0 rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-500 transition-colors hover:bg-red-50 hover:text-red-700">
                     Buka Kembali
                 </button>
             </form>

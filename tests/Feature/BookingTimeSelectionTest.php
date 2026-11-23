@@ -6,6 +6,7 @@ use App\Models\Booking;
 use App\Models\BookingDate;
 use App\Models\Room;
 use App\Services\Payment\PaymentServiceInterface;
+use Database\Seeders\RoomCatalogSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Config;
 use Mockery;
@@ -30,6 +31,75 @@ class BookingTimeSelectionTest extends TestCase
             ->assertSee('Fullday')
             ->assertSee('Rp55.000 / orang')
             ->assertSee('Service Charge 5%');
+    }
+
+    public function test_booking_page_lists_individual_rooms_from_the_catalog(): void
+    {
+        $this->seed(RoomCatalogSeeder::class);
+
+        $response = $this->get(route('booking.index'));
+
+        $response->assertOk()
+            ->assertSee('Ruang Bhaswara')
+            ->assertSee('Ruang Bhaskara')
+            ->assertSee('Ruang Bimantara')
+            ->assertSee('Ruang Biwara')
+            ->assertSee('Ruang Meeting Sadewa')
+            ->assertSee('Ruang Meeting Danuraga')
+            ->assertSee('Ruang Meeting Diwangkara')
+            ->assertSee('Ruang Meeting Abimanyu')
+            ->assertSee('Ruang Meeting Bhimasena VVIP');
+    }
+
+    public function test_room_catalog_seeder_removes_legacy_options_without_losing_booking_history(): void
+    {
+        $legacyMeetingRoom = Room::create([
+            'name' => 'Ruang Meeting',
+            'type' => 'Meeting Room',
+            'capacity' => 6,
+            'price_per_session' => 25000,
+            'facilities' => [],
+            'status' => 'active',
+        ]);
+        $legacyTrainingRoom = Room::create([
+            'name' => 'Ruangan Training',
+            'type' => 'Training',
+            'capacity' => 20,
+            'price_per_session' => 25000,
+            'facilities' => [],
+            'status' => 'active',
+        ]);
+        $booking = Booking::create([
+            'booking_code' => 'NSS-LEGACY-ROOM-HISTORY',
+            'room_id' => $legacyMeetingRoom->id,
+            'room_name' => $legacyMeetingRoom->name,
+            'room_price_per_session' => $legacyMeetingRoom->price_per_session,
+            'customer_name' => 'Legacy Room Customer',
+            'customer_phone' => '08123456789',
+            'customer_email' => 'legacy-room@example.com',
+            'booking_date' => now()->addDay()->toDateString(),
+            'start_time' => '09:00:00',
+            'end_time' => '10:00:00',
+            'duration' => 1,
+            'visitor_count' => 5,
+            'day_pass_price' => 125000,
+            'product_total' => 0,
+            'total_price' => 125000,
+            'status' => 'confirmed',
+            'visitor_category' => 'venue',
+        ]);
+
+        $this->seed(RoomCatalogSeeder::class);
+
+        $this->assertDatabaseHas('rooms', [
+            'id' => $legacyMeetingRoom->id,
+            'status' => 'inactive',
+        ]);
+        $this->assertDatabaseMissing('rooms', ['id' => $legacyTrainingRoom->id]);
+        $this->assertDatabaseHas('bookings', [
+            'id' => $booking->id,
+            'room_id' => $legacyMeetingRoom->id,
+        ]);
     }
 
     public function test_booking_page_requires_manual_visitor_count(): void
@@ -327,6 +397,125 @@ class BookingTimeSelectionTest extends TestCase
         }
 
         $this->assertSame(0, Booking::count());
+    }
+
+    public function test_availability_check_marks_an_overlapping_room_schedule_as_unavailable(): void
+    {
+        $room = Room::create([
+            'name' => 'Meeting Room Availability Check',
+            'type' => 'Meeting Room',
+            'capacity' => 10,
+            'price_per_session' => 150000,
+            'facilities' => [],
+            'status' => 'active',
+        ]);
+        $date = now()->addDays(2)->toDateString();
+        $booking = Booking::create([
+            'booking_code' => 'NSS-ROOM-AVAILABILITY',
+            'room_id' => $room->id,
+            'room_name' => $room->name,
+            'room_price_per_session' => $room->price_per_session,
+            'customer_name' => 'Existing Room Customer',
+            'customer_phone' => '08123456789',
+            'customer_email' => 'existing-room@example.com',
+            'booking_date' => $date,
+            'start_time' => '09:00:00',
+            'end_time' => '10:00:00',
+            'duration' => 1,
+            'visitor_count' => 10,
+            'day_pass_price' => 250000,
+            'product_total' => 0,
+            'total_price' => 250000,
+            'status' => 'pending',
+            'visitor_category' => 'venue',
+        ]);
+        $booking->bookingDates()->create([
+            'date' => $date,
+            'start_time' => '09:00:00',
+            'end_time' => '10:00:00',
+        ]);
+
+        $overlappingResponse = $this->postJson(route('booking.check'), [
+            'room_id' => $room->id,
+            'venue_package' => 'per_jam',
+            'dates' => [$date],
+            'arrival_times' => [$date => '09:00'],
+            'departure_times' => [$date => '10:00'],
+            'visitor_count' => 10,
+        ]);
+
+        $overlappingResponse->assertOk()
+            ->assertJsonPath('available', false)
+            ->assertJsonPath('message', 'Venue sudah dipesan pada salah satu jadwal pilihan.');
+
+        $availableResponse = $this->postJson(route('booking.check'), [
+            'room_id' => $room->id,
+            'venue_package' => 'per_jam',
+            'dates' => [$date],
+            'arrival_times' => [$date => '13:00'],
+            'departure_times' => [$date => '14:00'],
+            'visitor_count' => 10,
+        ]);
+
+        $availableResponse->assertOk()
+            ->assertJsonPath('available', true);
+    }
+
+    public function test_booking_availability_is_scoped_to_the_selected_room(): void
+    {
+        $bookedRoom = Room::create([
+            'name' => 'Booked Meeting Room',
+            'type' => 'Meeting Room',
+            'capacity' => 10,
+            'price_per_session' => 150000,
+            'facilities' => [],
+            'status' => 'active',
+        ]);
+        $availableRoom = Room::create([
+            'name' => 'Available Meeting Room',
+            'type' => 'Meeting Room',
+            'capacity' => 10,
+            'price_per_session' => 150000,
+            'facilities' => [],
+            'status' => 'active',
+        ]);
+        $date = now()->addDays(2)->toDateString();
+        $booking = Booking::create([
+            'booking_code' => 'NSS-SPECIFIC-ROOM-AVAILABILITY',
+            'room_id' => $bookedRoom->id,
+            'room_name' => $bookedRoom->name,
+            'room_price_per_session' => $bookedRoom->price_per_session,
+            'customer_name' => 'Existing Room Customer',
+            'customer_phone' => '08123456789',
+            'customer_email' => 'existing-room@example.com',
+            'booking_date' => $date,
+            'start_time' => '09:00:00',
+            'end_time' => '10:00:00',
+            'duration' => 1,
+            'visitor_count' => 10,
+            'day_pass_price' => 250000,
+            'product_total' => 0,
+            'total_price' => 250000,
+            'status' => 'confirmed',
+            'visitor_category' => 'venue',
+        ]);
+        $booking->bookingDates()->create([
+            'date' => $date,
+            'start_time' => '09:00:00',
+            'end_time' => '10:00:00',
+        ]);
+
+        $response = $this->postJson(route('booking.check'), [
+            'room_id' => $availableRoom->id,
+            'venue_package' => 'per_jam',
+            'dates' => [$date],
+            'arrival_times' => [$date => '09:00'],
+            'departure_times' => [$date => '10:00'],
+            'visitor_count' => 10,
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('available', true);
     }
 
     public function test_room_booking_rejects_an_overlapping_time_slot(): void

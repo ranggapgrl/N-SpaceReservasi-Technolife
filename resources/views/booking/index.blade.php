@@ -353,7 +353,7 @@
                                     <legend class="nss-radio">Pilih jenis tempat</legend>
                                     <div class="nss-modes">
                                         <label>
-                                            <input type="radio" name="booking_type" value="open_space" x-model="form.booking_type" class="nss-radio">
+                                            <input type="radio" name="booking_type" value="open_space" x-model="form.booking_type" @change="checkAvailabilityForSelectedDates()" class="nss-radio">
                                             <span class="nss-tarif nss-mode-card">
                                                 <span class="nss-dot"></span>
                                                 <span class="nss-mode-name">NEEDS Study Space</span>
@@ -362,7 +362,7 @@
                                             </span>
                                         </label>
                                         <label>
-                                            <input type="radio" name="booking_type" value="room" x-model="form.booking_type" class="nss-radio">
+                                            <input type="radio" name="booking_type" value="room" x-model="form.booking_type" @change="checkAvailabilityForSelectedDates()" class="nss-radio">
                                             <span class="nss-tarif nss-mode-card">
                                                 <span class="nss-dot"></span>
                                                 <span class="nss-mode-name">Venue lainnya</span>
@@ -487,7 +487,7 @@
                                                         name="venue_package"
                                                         value="{{ $packageKey }}"
                                                         x-model="form.venue_package"
-                                                        @change="normalizeVenueStartTimes()"
+                                                        @change="normalizeVenueStartTimes(); checkAvailabilityForSelectedDates()"
                                                         :required="form.booking_type === 'room'"
                                                         :disabled="form.booking_type !== 'room'"
                                                         class="peer sr-only">
@@ -563,7 +563,7 @@
                                                             <select :id="'arrival-' + date"
                                                                 :name="'arrival_times[' + date + ']'"
                                                                 x-model="form.schedules[date].arrival_time"
-                                                                @change="if (form.booking_type === 'open_space' && form.schedules[date].departure_time && form.schedules[date].departure_time <= form.schedules[date].arrival_time) form.schedules[date].departure_time = ''"
+                                                                @change="if (form.booking_type === 'open_space' && form.schedules[date].departure_time && form.schedules[date].departure_time <= form.schedules[date].arrival_time) form.schedules[date].departure_time = ''; checkAvailability(date)"
                                                                 required class="nss-field">
                                                                 <option value="">Pilih jam</option>
                                                                 <template x-for="time in (form.booking_type === 'room' ? venueStartTimeOptions() : arrivalTimes)" :key="time">
@@ -576,6 +576,7 @@
                                                             <select :id="'departure-' + date"
                                                                 :name="'departure_times[' + date + ']'"
                                                                 x-model="form.schedules[date].departure_time"
+                                                                @change="checkAvailability(date)"
                                                                 :disabled="form.booking_type !== 'open_space'"
                                                                 required class="nss-field">
                                                                 <option value="">Pilih jam</option>
@@ -598,6 +599,22 @@
                                                                 :disabled="form.booking_type !== 'room'">
                                                         </div>
                                                     </div>
+                                                    <p x-show="form.booking_type === 'room' && availability[date]?.status === 'checking'"
+                                                        role="status" aria-live="polite" class="nss-note">
+                                                        Memeriksa ketersediaan jadwal...
+                                                    </p>
+                                                    <p x-show="form.booking_type === 'room' && availability[date]?.status === 'available'"
+                                                        role="status" aria-live="polite" class="nss-note text-green-700">
+                                                        Jadwal tersedia.
+                                                    </p>
+                                                    <div x-show="form.booking_type === 'room' && ['unavailable', 'error'].includes(availability[date]?.status)"
+                                                        role="alert" class="nss-field-error">
+                                                        <span x-text="availability[date]?.message"></span>
+                                                        <button type="button" x-show="availability[date]?.status === 'error'"
+                                                            @click="checkAvailability(date)" class="underline">
+                                                            Coba periksa lagi
+                                                        </button>
+                                                    </div>
                                                 </fieldset>
                                             </template>
                                         </div>
@@ -617,6 +634,7 @@
                                             :disabled="form.booking_type === 'room' && minimumAttendees() > visitorCapacity()"
                                             step="1"
                                             x-model.number="form.visitor_count"
+                                            @change="checkAvailabilityForSelectedDates()"
                                             required
                                             class="nss-field"
                                         >
@@ -803,8 +821,8 @@
                 <aside class="nss-bk-aside" :class="{ 'is-open': step === 2 || step === 4 }" aria-label="Ringkasan pesanan">
                     <div class="nss-pass" :class="{ 'nss-pass--tariff': step === 1 }">
                         <div class="nss-pass-body">
-                            <p class="nss-pass-title font-headline" x-text="form.booking_type === 'room' ? 'Pemesanan Venue' : 'Needs Study Space'"></p>
-                            <h2 class="nss-display nss-pass-name" x-text="form.booking_type === 'room' ? (selectedRoom()?.name || 'Pilih venue') : 'Open Space day pass'"></h2>
+                            <p class="nss-pass-title font-headline" x-text="form.booking_type === 'room' ? 'Pemesanan Venue' : ' Needs Study Space'" style="color:#b91c1c"></p>
+                            <h2 class="nss-display nss-pass-name" x-text="form.booking_type === 'room' ? (selectedRoom()?.name || 'Pilih venue') : 'Study Space day pass'"></h2>
 
                             <dl class="nss-rows">
                                 <div class="nss-row">
@@ -903,6 +921,7 @@ function bookingWizard() {
     const VENUES = @json($bookingRooms);
     const VENUE_PACKAGES = @json($venuePackages);
     const VENUE_SERVICE_CHARGE_PERCENT = {{ (float) $venueServiceChargePercent }};
+    const BOOKING_CHECK_URL = @json(route('booking.check'));
     const OPEN_SPACE_CAPACITY = {{ (int) config('booking.open_space_capacity', 50) }};
     const TITLES = ['Pilih tempat', 'Pilih tanggal dan jadwal', 'Snack dan minuman', 'Data pemesan'];
     const TIME_OPTIONS = Array.from({ length: 29 }, (_, index) => {
@@ -940,7 +959,7 @@ function bookingWizard() {
             'departure_times',
         ]);
     @endphp
-    const timeValidationFailed = @json($timeValidationFailed);
+    const timeValidationFailed = @json($timeValidationFailed || (session()->has('error') && old('room_id')));
 
     return {
         step: timeValidationFailed ? 2 : (restored ? 4 : 1),
@@ -958,6 +977,8 @@ function bookingWizard() {
 
         // Kalender & tanggal ditutup
         blocked: [],
+        availability: {},
+        availabilityRequestIds: {},
         viewYear: new Date().getFullYear(),
         viewMonth: new Date().getMonth(),
 
@@ -1013,6 +1034,7 @@ function bookingWizard() {
             });
             // Mulai slideshow galeri otomatis setiap 3 detik
             this.galTimer = setInterval(() => { this.area = (this.area + 1) % this.galCount; }, 3000);
+            this.checkAvailabilityForSelectedDates();
         },
 
         moveArea(delta, focusTab = false) {
@@ -1113,13 +1135,87 @@ function bookingWizard() {
             if (this.form.dates.includes(str)) {
                 this.form.dates = this.form.dates.filter(date => date !== str);
                 delete this.form.schedules[str];
+                this.availabilityRequestIds[str] = (this.availabilityRequestIds[str] || 0) + 1;
+                delete this.availability[str];
                 return;
             }
             if (this.form.dates.length >= 30) return;
             this.form.dates = [...this.form.dates, str].sort();
             this.form.schedules[str] = { arrival_time: '', departure_time: '' };
+            this.checkAvailability(str);
         },
 
+        checkAvailabilityForSelectedDates() {
+            if (this.form.booking_type !== 'room') return;
+            this.form.dates.forEach(date => this.checkAvailability(date));
+        },
+        async checkAvailability(date) {
+            const requestId = (this.availabilityRequestIds[date] || 0) + 1;
+            this.availabilityRequestIds[date] = requestId;
+
+            const schedule = this.form.schedules[date];
+            const departureTime = this.venueDepartureTime(date);
+            const visitorCount = Number(this.form.visitor_count);
+            if (this.form.booking_type !== 'room'
+                || !this.selectedRoom()
+                || !this.selectedPackage()
+                || !schedule?.arrival_time
+                || !departureTime
+                || !Number.isInteger(visitorCount)
+                || visitorCount < this.minimumAttendees()
+                || visitorCount > this.visitorCapacity()) {
+                this.availability[date] = { status: 'idle', message: '' };
+                return false;
+            }
+
+            this.availability[date] = { status: 'checking', message: '' };
+
+            try {
+                const response = await fetch(BOOKING_CHECK_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('#bookingForm input[name="_token"]')?.value || ''
+                    },
+                    body: JSON.stringify({
+                        room_id: Number(this.form.room_id),
+                        venue_package: this.form.venue_package,
+                        dates: [date],
+                        arrival_times: { [date]: schedule.arrival_time },
+                        departure_times: { [date]: departureTime },
+                        visitor_count: visitorCount
+                    })
+                });
+                const result = await response.json();
+                if (!response.ok) {
+                    const validationMessage = Object.values(result.errors || {})
+                        .flat()
+                        .find(message => typeof message === 'string');
+                    throw new Error(validationMessage || result.message || 'Pemeriksaan ketersediaan gagal.');
+                }
+                if (requestId !== this.availabilityRequestIds[date]) return false;
+
+                const isAvailable = result.available === true;
+                this.availability[date] = {
+                    status: isAvailable ? 'available' : 'unavailable',
+                    message: result.message || (isAvailable ? 'Jadwal tersedia.' : 'Jadwal sudah terisi.')
+                };
+
+                return isAvailable;
+            } catch (error) {
+                if (requestId !== this.availabilityRequestIds[date]) return false;
+
+                this.availability[date] = {
+                    status: 'error',
+                    message: error instanceof Error
+                        ? `Tidak dapat memeriksa ketersediaan: ${error.message}`
+                        : 'Tidak dapat memeriksa ketersediaan. Silakan coba lagi.'
+                };
+
+                return false;
+            }
+        },
         selectedRoom() {
             return VENUES.find(room => String(room.id) === String(this.form.room_id)) || null;
         },
@@ -1129,6 +1225,7 @@ function bookingWizard() {
 
             this.form.room_id = String(roomId);
             if (this.form.visitor_count > this.visitorCapacity()) this.form.visitor_count = '';
+            this.checkAvailabilityForSelectedDates();
         },
         selectedPackage() {
             return VENUE_PACKAGES[this.form.venue_package] || null;
@@ -1170,6 +1267,8 @@ function bookingWizard() {
                                 && schedule.departure_time > schedule.arrival_time);
                 })) return false;
                 if (this.firstBlockedSelectedDate()) return false;
+                if (this.form.booking_type === 'room'
+                    && !this.form.dates.every(date => this.availability[date]?.status === 'available')) return false;
                 return true;
             }
             return true;
